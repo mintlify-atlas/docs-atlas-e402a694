@@ -1,0 +1,164 @@
+---
+title: "ParticleAPI — spawn and control particle effects"
+description: "Reference for the particles global: spawn and control Minecraft particle effects from avatar scripts, with position, velocity, color, and lifetime options."
+---
+
+The `particles` global lets avatar scripts spawn Minecraft particle effects in the world. Each call to `particles:newParticle(...)` creates a `Particle` object you can configure and spawn. Particle output is rate-limited by the `PARTICLES` permission, which caps how many particles an avatar may spawn per tick.
+
+## `particles` API
+
+### `particles:newParticle(id, pos[, vel])`
+
+Creates a particle instance and immediately spawns it. Returns a `Particle` object for further manipulation before or after spawning.
+
+**Overloads:**
+
+```lua
+-- Position as a Vector3, no initial velocity
+particles:newParticle("minecraft:flame", player:getPos())
+
+-- Position and velocity as Vector3 values
+particles:newParticle("minecraft:heart",
+    player:getPos():add(0, 2, 0),
+    vectors.vec3(0, 0.1, 0)
+)
+
+-- Position as separate numbers
+particles:newParticle("minecraft:crit", x, y, z)
+
+-- Position vector + velocity numbers
+particles:newParticle("minecraft:flame", player:getPos(), 0, 0.05, 0)
+
+-- All separate numbers (pos then vel)
+particles:newParticle("minecraft:smoke", px, py, pz, vx, vy, vz)
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | `string` | Particle type ID (e.g. `"minecraft:flame"`) |
+| `pos` | `Vector3` or x/y/z | Spawn position in world coordinates |
+| `vel` | `Vector3` or x/y/z | Initial velocity (optional, defaults to zero) |
+
+Returns a `Particle` instance.
+
+---
+
+### `particles:removeParticles()`
+
+Removes all particles that were spawned by this avatar.
+
+```lua
+particles:removeParticles()
+```
+
+Returns `ParticleAPI` (chainable).
+
+---
+
+### `particles:isPresent(id)`
+
+Returns `true` if the given particle ID is recognized by the Minecraft particle engine.
+
+```lua
+if particles:isPresent("minecraft:flame") then
+    particles:newParticle("minecraft:flame", player:getPos())
+end
+```
+
+Returns `boolean`.
+
+---
+
+## Particle object methods
+
+`particles:newParticle(...)` returns a `Particle` object. You can also obtain an unconfigured particle via `particles["minecraft:flame"]` (indexing the API directly). All setters return `self` for chaining.
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `particle:spawn()` | `Particle` | Spawn (or re-spawn) the particle in the world |
+| `particle:remove()` | `Particle` | Remove the particle immediately |
+| `particle:isAlive()` | `boolean` | Whether the particle is still active |
+| `particle:getPos()` | `Vector3` | Current position |
+| `particle:setPos(pos)` | `Particle` | Set world position (alias: `particle:pos(...)`) |
+| `particle:getVelocity()` | `Vector3` | Current velocity |
+| `particle:setVelocity(vel)` | `Particle` | Set velocity (alias: `particle:velocity(...)`) |
+| `particle:getColor()` | `Vector4` | Current RGBA color (components in 0–1 range) |
+| `particle:setColor(r, g, b[, a])` | `Particle` | Set RGBA color; also accepts Vec3 or Vec4 (alias: `particle:color(...)`) |
+| `particle:getLifetime()` | `integer` | Remaining lifetime in ticks |
+| `particle:setLifetime(ticks)` | `Particle` | Set lifetime in ticks, minimum `0` (alias: `particle:lifetime(ticks)`) |
+| `particle:getScale()` | `number` | Current scale factor |
+| `particle:setScale(scale)` | `Particle` | Set visual scale (aliases: `particle:scale(...)`, `particle:setSize(...)`, `particle:size(...)`) |
+| `particle:getPower()` | `number` | Current power value |
+| `particle:setPower(power)` | `Particle` | Set the particle's power (alias: `particle:power(power)`) |
+| `particle:getGravity()` | `number` | Current gravity factor |
+| `particle:setGravity(gravity)` | `Particle` | Set gravity; `1.0` = normal, `0` = no gravity (alias: `particle:gravity(gravity)`) |
+| `particle:hasPhysics()` | `boolean` | Whether the particle collides with blocks |
+| `particle:setPhysics(bool)` | `Particle` | Enable or disable physics (alias: `particle:physics(bool)`) |
+
+---
+
+## Particle ID format
+
+Particle IDs follow the `namespace:name` resource location convention. All vanilla particle types live in the `minecraft` namespace:
+
+```
+"minecraft:flame"
+"minecraft:heart"
+"minecraft:crit"
+"minecraft:smoke"
+"minecraft:cloud"
+"minecraft:explosion"
+"minecraft:end_rod"
+"minecraft:dragon_breath"
+"minecraft:dust 1 0 0 1"   -- colored dust: r g b size
+```
+
+Some particles accept parameters appended after a space (like `dust`). The full ID string is passed directly to Minecraft's particle argument parser.
+
+---
+
+## Permissions
+
+| Permission | Effect |
+|-----------|--------|
+| `PARTICLES` | Limits how many particles this avatar may spawn per tick |
+
+When the limit is reached, `particle:spawn()` silently skips and the `PARTICLES` permission appears in the avatar's "no permissions" list.
+
+---
+
+## Examples
+
+```lua
+-- Spawn a heart particle above the player
+particles:newParticle(
+    "minecraft:heart",
+    player:getPos():add(0, 2, 0),
+    vectors.vec3(0, 0.1, 0)
+)
+
+-- Spawn flame particles around the player every tick
+events.TICK:register(function()
+    local pos = player:getPos()
+    local angle = world.getTime() * 0.2
+    local ox = math.cos(angle) * 0.5
+    local oz = math.sin(angle) * 0.5
+    particles:newParticle("minecraft:flame",
+        pos:add(ox, 1, oz),
+        vectors.vec3(0, 0.05, 0)
+    )
+end)
+
+-- Create a controllable particle with custom color and lifetime
+local p = particles["minecraft:end_rod"]
+p:setColor(1, 0, 1)        -- magenta
+p:setLifetime(40)           -- 2 seconds
+p:setGravity(0)             -- float in place
+p:setPos(player:getPos():add(0, 3, 0))
+p:spawn()
+
+-- Remove all avatar particles on unload
+events.ENTITY_UNLOAD:register(function()
+    particles:removeParticles()
+end)
+```

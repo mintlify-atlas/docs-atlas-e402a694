@@ -1,0 +1,120 @@
+---
+title: "Figura avatar textures and emissive rendering"
+description: "How Figura loads PNG textures, the _e suffix convention for emissive maps, available render types, and shader compatibility tips for OptiFine and Iris."
+---
+
+Figura loads textures automatically from PNG files placed in your avatar folder. Each `.bbmodel` file references textures by name, and Figura matches those names against the PNGs it finds at load time. You do not need to configure paths manually — file naming is the entire convention.
+
+## Texture file placement
+
+Place PNG files directly in your avatar folder alongside `avatar.json` and your `.bbmodel` file. Blockbench references textures by their filename (without extension), so a texture saved as `skin.png` is referenced as `skin` inside the model.
+
+```
+my_avatar/
+├── avatar.json
+├── model.bbmodel
+├── skin.png           ← main texture
+└── skin_e.png         ← emissive texture for "skin"
+```
+
+Textures can be organized into subdirectories when your avatar has many files. Use the Blockbench texture manager to set relative paths accordingly.
+
+## Emissive textures
+
+An emissive texture makes parts of your model glow — they are rendered at full brightness regardless of the world light level.
+
+### Naming convention
+
+Name the emissive file the same as its paired main texture, then append `_e`:
+
+| Main texture | Emissive texture |
+|---|---|
+| `skin.png` | `skin_e.png` |
+| `armor.png` | `armor_e.png` |
+| `eyes.png` | `eyes_e.png` |
+
+Figura detects the `_e` suffix automatically and treats that file as the emissive layer for the paired texture set (`FiguraTextureSet.java:20-26`).
+
+<Warning>
+  Areas of the emissive texture that you do **not** want to glow must be set to **transparent black** (`#00000000`, alpha = 0). Using opaque black (`#000000FF`) will cause those pixels to render as a dark emissive overlay. This also ensures correct compatibility with shader mods.
+</Warning>
+
+## Render types
+
+Figura exposes a set of named render types that control how a model part's geometry is drawn. You assign a render type to a part from Lua or from within Blockbench's material settings. The full list comes from `RenderTypes.java`:
+
+<Tabs>
+  <Tab title="Common types">
+    | Render type | Behavior |
+    |---|---|
+    | `CUTOUT` | Alpha-tested — pixels are either fully opaque or fully transparent. No back-face culling. |
+    | `CUTOUT_CULL` | Same as `CUTOUT` with back-face culling enabled. |
+    | `TRANSLUCENT` | Semi-transparent blending, no culling. Use for glass-like effects. |
+    | `TRANSLUCENT_CULL` | Semi-transparent with back-face culling. |
+    | `EMISSIVE` | Fullbright rendering using the vanilla `eyes` render type. |
+    | `EMISSIVE_SOLID` | Fullbright without transparency, based on the beacon beam shader. |
+    | `EYES` | Identical to `EMISSIVE` — forces the correct shader-compatible emissive path. |
+  </Tab>
+  <Tab title="Special types">
+    | Render type | Behavior |
+    |---|---|
+    | `GLINT` | Enchantment glint effect, no texture. |
+    | `TEXTURED_GLINT` | Glint effect using your texture as the pattern. |
+    | `BLURRY` | Translucent with bilinear (blurry) texture filtering. |
+    | `END_PORTAL` | End portal swirling effect. |
+    | `LINES` / `LINES_STRIP` | Wireframe line rendering. |
+    | `SOLID` | Unlit solid color, no texture sampling. |
+  </Tab>
+</Tabs>
+
+### Setting a render type from Lua
+
+```lua
+-- Set a part to translucent
+models.model.Body:setPrimaryRenderType("TRANSLUCENT")
+
+-- Set the emissive layer render type separately
+models.model.Body:setSecondaryRenderType("EMISSIVE")
+```
+
+## Shader compatibility (OptiFine and Iris)
+
+Some shaders do not support Minecraft's standard emissive render path, which causes emissive textures to appear dark or non-glowing.
+
+<AccordionGroup>
+  <Accordion title="Default behavior">
+    By default, Figura includes a compatibility setting (enabled automatically) that renders emissive textures as fullbright even when a shader would otherwise ignore them. This keeps glow effects visible under most shaders.
+  </Accordion>
+  <Accordion title="Forcing correct emissive with shaders">
+    If you want proper bloom and shader-driven emissive effects (rather than just fullbright), set the render type of your emissive model parts to `EYES`:
+
+    ```lua
+    models.model.GlowPart:setSecondaryRenderType("EYES")
+    ```
+
+    The `EYES` render type maps directly to `RenderType::eyes` (`RenderTypes.java:26`), which most shader packs recognize as the emissive signal.
+  </Accordion>
+  <Accordion title="OptiFine vs Iris/Sodium">
+    Figura works with OptiFine, but due to OptiFine's closed-source nature some rendering edge cases may arise. The recommended alternative is **Sodium + Iris** (Fabric) or **Rubidium + Oculus** (Forge/NeoForge), which are open-source and have better compatibility with Figura's render pipeline.
+  </Accordion>
+</AccordionGroup>
+
+## Referencing textures from Lua
+
+You can access and manipulate avatar textures at runtime through the `textures` API:
+
+```lua
+-- Get a reference to a named texture from the avatar
+local myTex = textures["skin"]
+
+-- Read the color of a specific pixel (x, y)
+local color = myTex:getPixel(0, 0)
+
+-- Write a color to a pixel and upload the change
+myTex:setPixel(4, 8, vectors.vec4(1, 0, 0, 1)) -- red pixel
+myTex:update()
+```
+
+<Note>
+  Pixel coordinates in `getPixel` and `setPixel` are zero-indexed, measured from the top-left corner of the image.
+</Note>

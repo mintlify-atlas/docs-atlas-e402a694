@@ -1,0 +1,107 @@
+---
+title: "Figura avatar folder structure and model parts"
+description: "Learn how a Figura avatar folder is organized, how model parts map to FiguraModelPart, and how the ParentType system attaches groups to the vanilla player."
+---
+
+A Figura avatar is a folder on your local filesystem that Figura discovers and uploads to its backend. Inside that folder, Blockbench model files, PNG textures, Lua scripts, and a single required metadata file work together to replace or augment the vanilla player model. Every piece is optional except `avatar.json` — without it, Figura will not recognize the folder as an avatar at all.
+
+## Folder layout
+
+A minimal avatar folder looks like this:
+
+```
+my_avatar/
+├── avatar.json        ← required; can be empty {}
+├── model.bbmodel      ← Blockbench model (one or more)
+├── skin.png           ← main texture
+├── skin_e.png         ← emissive texture (optional)
+└── script.lua         ← Lua script (optional)
+```
+
+<Note>
+  `avatar.json` is the only required file. Its contents can be a bare `{}` — Figura only needs the file to be present to recognize the folder as a valid avatar.
+</Note>
+
+### avatar.json fields
+
+While an empty object is valid, `avatar.json` can carry optional metadata:
+
+```json
+{
+  "name": "My Cool Avatar",
+  "description": "A sample avatar",
+  "author": "YourName",
+  "version": "0.1.0",
+  "color": "#5EA5FF"
+}
+```
+
+## Model parts and FiguraModelPart
+
+Every group and cube you create in Blockbench becomes a `FiguraModelPart` at runtime (`FiguraModelPart.java:41`). Parts form a tree: each part holds a reference to its `parent` and a list of `children`. You access parts from Lua via the `models` global, using the hierarchy as a path:
+
+```lua
+-- Hide a group named "Hat" inside the root group "model"
+models.model.Hat:setVisible(false)
+```
+
+Parts expose per-part customization through `PartCustomization`, letting you override position, rotation, scale, color, render type, and more.
+
+## The ParentType system
+
+Figura automatically detects the **ParentType** of a group by matching the group's name against a list of known aliases (`ParentType.java:99-112`). When a match is found, the group inherits the transform of the corresponding vanilla body part and moves with it.
+
+<Tabs>
+  <Tab title="Vanilla body parts">
+    | Group name prefix | ParentType | Notes |
+    |---|---|---|
+    | `HEAD` | `Head` | Follows vanilla head rotation |
+    | `BODY` | `Body` | Follows body yaw |
+    | `LEFT_ARM` | `LeftArm` | Offset `(5, 2, 0)` from body |
+    | `RIGHT_ARM` | `RightArm` | Offset `(-5, 2, 0)` from body |
+    | `LEFT_LEG` | `LeftLeg` | Offset `(1.9, 12, 0)` from body |
+    | `RIGHT_LEG` | `RightLeg` | Offset `(-1.9, 12, 0)` from body |
+  </Tab>
+  <Tab title="Special render targets">
+    | Group name prefix | ParentType | Notes |
+    |---|---|---|
+    | `WORLD` | `World` | Renders in world space, ignores player transform |
+    | `HUD` | `Hud` | Renders on the HUD overlay |
+    | `CAMERA` | `Camera` | Billboards toward the camera |
+    | `SKULL` | `Skull` | Used for skull/head item rendering |
+    | `PORTRAIT` | `Portrait` | Used in the Figura wardrobe portrait |
+  </Tab>
+  <Tab title="Pivot points">
+    | Group name prefix | ParentType | Notes |
+    |---|---|---|
+    | `LEFT_ITEM_PIVOT` | `LeftItemPivot` | Held item attachment (left hand) |
+    | `RIGHT_ITEM_PIVOT` | `RightItemPivot` | Held item attachment (right hand) |
+    | `HELMET_PIVOT` | `HelmetPivot` | Helmet armor attachment |
+    | `LEFT_ELYTRA_PIVOT` | `LeftElytraPivot` | Left elytra wing attachment |
+    | `RIGHT_ELYTRA_PIVOT` | `RightElytraPivot` | Right elytra wing attachment |
+  </Tab>
+</Tabs>
+
+<Tip>
+  The matching is prefix-based, so a group named `HEAD_Hat` will still resolve to the `Head` ParentType. This lets you have multiple groups parented to the same body part.
+</Tip>
+
+A group that does not match any known alias is assigned `ParentType.None` and renders relative to the model root.
+
+## Avatar complexity and permissions
+
+Figura's permission system limits what an avatar is allowed to do. Permissions cap things like maximum texture size, script instruction count per tick, and whether sounds or particles can be spawned. These limits are set by server operators or by individual players adjusting their local trust settings. If your avatar exceeds a limit, the affected feature is silently disabled rather than crashing.
+
+## Explore further
+
+<CardGroup cols={3}>
+  <Card title="Blockbench" href="/avatar/blockbench" icon="cube">
+    Build and export your model using the Figura Blockbench plugin.
+  </Card>
+  <Card title="Textures" href="/avatar/textures" icon="image">
+    Apply textures, emissives, and custom render types.
+  </Card>
+  <Card title="Animations" href="/avatar/animations" icon="play">
+    Create and drive animations from Lua scripts.
+  </Card>
+</CardGroup>

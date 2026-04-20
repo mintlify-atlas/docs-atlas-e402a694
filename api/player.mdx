@@ -1,0 +1,507 @@
+---
+title: "PlayerAPI — player health, items, and game state"
+description: "PlayerAPI extends EntityAPI and LivingEntityAPI with player-exclusive fields: gamemode, food, XP, held items, equipment, shoulder entities, and more."
+---
+
+The `player` global in Figura scripts is a `PlayerAPI` instance representing the avatar's associated player. It inherits all methods from [EntityAPI](/api/entity) and `LivingEntityAPI`, adding player-exclusive data such as gamemode, food, experience, equipment, and cosmetic state. Methods from `LivingEntityAPI` are documented in the [living entity section](#living-entity-methods) below.
+
+<Note>
+  `player` is always available in scripts, but some methods return `nil` if the player's info has not yet been synced from the server (for example `getGamemode()` before the tab list is populated).
+</Note>
+
+## Player methods
+
+### `getFood()`
+
+Returns the player's current hunger level (0–20).
+
+```lua
+local hunger = player:getFood()
+if hunger < 6 then
+  print("Player is very hungry!")
+end
+```
+
+**Returns:** `integer`
+
+---
+
+### `getSaturation()`
+
+Returns the player's current saturation level. Saturation depletes before hunger does.
+
+```lua
+local sat = player:getSaturation()
+```
+
+**Returns:** `number`
+
+---
+
+### `getExhaustion()`
+
+Returns the player's exhaustion value. Actions like sprinting and jumping accumulate exhaustion, which depletes saturation when it reaches 4.
+
+```lua
+local ex = player:getExhaustion()
+```
+
+**Returns:** `number`
+
+---
+
+### `getExperienceLevel()`
+
+Returns the player's current XP level integer.
+
+```lua
+local lvl = player:getExperienceLevel()
+print("Level:", lvl)
+```
+
+**Returns:** `integer`
+
+---
+
+### `getExperienceProgress()`
+
+Returns the player's XP progress toward the next level as a value in `[0.0, 1.0)`.
+
+```lua
+local prog = player:getExperienceProgress()
+-- 0.5 means halfway through the current level
+```
+
+**Returns:** `number`
+
+---
+
+### `getXpForNextLevel()`
+
+Returns the total XP points needed to advance from the current level to the next.
+
+**Returns:** `integer`
+
+---
+
+### `getGamemode()`
+
+Returns the player's current gamemode as an uppercase string: `"SURVIVAL"`, `"CREATIVE"`, `"ADVENTURE"`, or `"SPECTATOR"`. Returns `nil` if the player's info is not yet available.
+
+```lua
+if player:getGamemode() == "CREATIVE" then
+  print("Player is in creative mode.")
+end
+```
+
+**Returns:** `string` or `nil`
+
+---
+
+### `getModelType()`
+
+Returns the player's skin model variant: `"DEFAULT"` (Steve) or `"SLIM"` (Alex).
+
+```lua
+print(player:getModelType())  -- "DEFAULT" or "SLIM"
+```
+
+**Returns:** `string`
+
+---
+
+### `hasCape()`
+
+Returns `true` if the player has a cape loaded.
+
+**Returns:** `boolean`
+
+---
+
+### `hasSkin()`
+
+Returns `true` if the player has a custom skin loaded from the session servers.
+
+**Returns:** `boolean`
+
+---
+
+### `isSkinLayerVisible(part)`
+
+Returns `true` if the given skin layer is enabled on the player's model. This reflects the toggles in Minecraft's skin customization settings.
+
+<ParamField path="part" type="string" required>
+  One of: `"CAPE"`, `"JACKET"`, `"LEFT_SLEEVE"`, `"RIGHT_SLEEVE"`, `"LEFT_PANTS"`, `"RIGHT_PANTS"`, `"HAT"`. Case-insensitive.
+</ParamField>
+
+```lua
+if player:isSkinLayerVisible("HAT") then
+  -- the player has the hat layer enabled
+end
+```
+
+**Returns:** `boolean`
+
+---
+
+### `isFishing()`
+
+Returns `true` if the player currently has a fishing rod cast (hook is in the world).
+
+```lua
+if player:isFishing() then
+  print("Player is fishing.")
+end
+```
+
+**Returns:** `boolean`
+
+---
+
+### `getChargedAttackDelay()`
+
+Returns the current item's attack charge delay in ticks (how long a full charge takes).
+
+**Returns:** `number`
+
+---
+
+### `getShoulderEntity([right])`
+
+Returns an NBT table representing the entity sitting on the player's left or right shoulder (typically a parrot), or an empty table if none.
+
+<ParamField path="right" type="boolean">
+  `true` for the right shoulder, `false` for the left. Defaults to `false`.
+</ParamField>
+
+```lua
+local rightShoulder = player:getShoulderEntity(true)
+if next(rightShoulder) then
+  print("Parrot on right shoulder:", rightShoulder.id)
+end
+```
+
+**Returns:** `table` (NBT data, may be empty)
+
+---
+
+### `getTeamInfo()`
+
+Returns a table with details about the player's scoreboard team, or `nil` if the player is not on a team.
+
+The returned table contains:
+
+| Key | Type | Description |
+|---|---|---|
+| `name` | string | Internal team name |
+| `display_name` | string | Formatted display name |
+| `color` | string | Team color name |
+| `prefix` | string | Chat prefix text |
+| `suffix` | string | Chat suffix text |
+| `friendly_fire` | boolean | Whether friendly fire is on |
+| `see_friendly_invisibles` | boolean | Whether team members see each other when invisible |
+| `nametag_visibility` | string | Nametag visibility rule |
+| `death_message_visibility` | string | Death message visibility rule |
+| `collision_rule` | string | Collision rule |
+
+```lua
+local team = player:getTeamInfo()
+if team then
+  print("Team:", team.name, "Color:", team.color)
+end
+```
+
+**Returns:** `table` or `nil`
+
+---
+
+### `getCooldownPercent(stack, [delta])`
+
+Returns the cooldown progress for the item type of the given `ItemStack`, from `0.0` (no cooldown) to `1.0` (full cooldown active).
+
+<ParamField path="stack" type="ItemStack" required>
+  The item stack whose cooldown to query.
+</ParamField>
+<ParamField path="delta" type="number">
+  Interpolation factor. Defaults to `0.0`.
+</ParamField>
+
+```lua
+local sword = player:getHeldItem(false)
+if sword then
+  local cd = player:getCooldownPercent(sword)
+  print("Cooldown:", cd)
+end
+```
+
+**Returns:** `number`
+
+---
+
+## Living entity methods
+
+These methods are inherited from `LivingEntityAPI` and are available on any living entity, including players.
+
+### `getHealth()`
+
+Returns the entity's current health points.
+
+```lua
+local hp = player:getHealth()
+print("HP:", hp, "/", player:getMaxHealth())
+```
+
+**Returns:** `number`
+
+---
+
+### `getMaxHealth()`
+
+Returns the entity's maximum health points.
+
+**Returns:** `number`
+
+---
+
+### `getArmor()`
+
+Returns the entity's total armor value (number of armor points, each worth 4% damage reduction).
+
+```lua
+print("Armor:", player:getArmor())
+```
+
+**Returns:** `number`
+
+---
+
+### `getAbsorptionAmount()`
+
+Returns the entity's current absorption (extra hearts from golden apples or effects).
+
+**Returns:** `number`
+
+---
+
+### `getDeathTime()`
+
+Returns the entity's death animation timer (0 when alive; counts up during death animation).
+
+**Returns:** `number`
+
+---
+
+### `getArrowCount()`
+
+Returns the number of arrows currently stuck in the entity.
+
+**Returns:** `integer`
+
+---
+
+### `getStingerCount()`
+
+Returns the number of bee stingers currently stuck in the entity.
+
+**Returns:** `integer`
+
+---
+
+### `isLeftHanded()`
+
+Returns `true` if the entity's main arm is the left hand.
+
+```lua
+if player:isLeftHanded() then
+  print("Player is left-handed.")
+end
+```
+
+**Returns:** `boolean`
+
+---
+
+### `getHeldItem([offhand])`
+
+Returns the `ItemStack` the entity is holding in the main hand, or the off-hand if `offhand` is `true`.
+
+<ParamField path="offhand" type="boolean">
+  `true` to get the off-hand item. Defaults to `false` (main hand).
+</ParamField>
+
+```lua
+local mainItem = player:getHeldItem(false)
+local offItem  = player:getHeldItem(true)
+if mainItem then
+  print("Holding:", mainItem:getName())
+end
+```
+
+**Returns:** `ItemStack` or `nil`
+
+---
+
+### `getActiveItem()`
+
+Returns the `ItemStack` currently being used (e.g. being eaten or a bow being drawn), or an empty item if none.
+
+```lua
+local item = player:getActiveItem()
+```
+
+**Returns:** `ItemStack`
+
+---
+
+### `getActiveItemTime()`
+
+Returns how many ticks the active item has been in use.
+
+**Returns:** `integer`
+
+---
+
+### `getActiveHand()`
+
+Returns the name of the hand currently using an item: `"MAIN_HAND"` or `"OFF_HAND"`.
+
+```lua
+print(player:getActiveHand())
+```
+
+**Returns:** `string`
+
+---
+
+### `isUsingItem()`
+
+Returns `true` if the entity is currently using an item (eating, drawing bow, etc.).
+
+**Returns:** `boolean`
+
+---
+
+### `isClimbing()`
+
+Returns `true` if the entity is currently on a climbable surface (ladder, vine, etc.).
+
+**Returns:** `boolean`
+
+---
+
+### `isGliding()`
+
+Returns `true` if the entity is gliding with an elytra (fall flying).
+
+**Returns:** `boolean`
+
+---
+
+### `isBlocking()`
+
+Returns `true` if the entity is blocking with a shield.
+
+**Returns:** `boolean`
+
+---
+
+### `isVisuallySwimming()`
+
+Returns `true` if the entity is in the visual swimming pose (horizontal crawl).
+
+**Returns:** `boolean`
+
+---
+
+### `riptideSpinning()`
+
+Returns `true` if the entity is performing a riptide trident spin attack.
+
+**Returns:** `boolean`
+
+---
+
+### `isSwingingArm()`
+
+Returns `true` if the entity's arm swing animation is currently playing.
+
+**Returns:** `boolean`
+
+---
+
+### `getSwingArm()`
+
+Returns the name of the arm currently swinging (`"MAIN_HAND"` or `"OFF_HAND"`), or `nil` if no swing is in progress.
+
+**Returns:** `string` or `nil`
+
+---
+
+### `getSwingTime()`
+
+Returns the current tick progress of the arm swing animation.
+
+**Returns:** `integer`
+
+---
+
+### `getSwingDuration()`
+
+Returns the total duration of the arm swing animation in ticks.
+
+**Returns:** `integer`
+
+---
+
+### `getBodyYaw([delta])`
+
+Returns the body yaw rotation of the entity, interpolated by `delta`.
+
+<ParamField path="delta" type="number">
+  Interpolation factor. Defaults to `1.0`.
+</ParamField>
+
+```lua
+local yaw = player:getBodyYaw()
+```
+
+**Returns:** `number`
+
+---
+
+### `getEntityCategory()`
+
+Returns the mob type category of the entity as a string: `"ARTHROPOD"`, `"UNDEAD"`, `"WATER"`, `"ILLAGER"`, or `"UNDEFINED"`.
+
+```lua
+print(player:getEntityCategory())  -- "UNDEFINED" for players
+```
+
+**Returns:** `string`
+
+---
+
+### `isSensitiveToWater()`
+
+Returns `true` if the entity takes damage from water (e.g. blazes, endermen).
+
+**Returns:** `boolean`
+
+---
+
+## Usage example
+
+```lua
+-- Print a summary of the local player's state each tick
+function events.tick()
+  local hp  = player:getHealth()
+  local max = player:getMaxHealth()
+  local food = player:getFood()
+  local lvl  = player:getExperienceLevel()
+
+  log(string.format(
+    "HP: %.1f/%.1f  Food: %d  Level: %d  Gamemode: %s",
+    hp, max, food, lvl, player:getGamemode() or "?"
+  ))
+end
+```

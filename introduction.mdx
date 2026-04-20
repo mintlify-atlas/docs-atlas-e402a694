@@ -1,0 +1,80 @@
+---
+title: "What is Figura? Custom avatars for Minecraft Java"
+description: "Figura is a Minecraft Java Edition client mod that replaces your player model with a custom avatar visible to all Figura users — no server mod required."
+---
+
+Figura is a Minecraft Java Edition client mod that replaces the default player model with a fully custom avatar of your own design. Any other player who also has Figura installed will see your avatar automatically — no server-side plugin or mod is required. Avatars are uploaded to the Figura backend server when you equip them and downloaded by other clients on demand.
+
+## How Figura works
+
+Figura is a **client-only** mod. When you equip an avatar, Figura authenticates your Mojang account and uploads your avatar data to the Figura backend server. Other players running Figura connect to the same backend and automatically fetch and render your avatar in-game. The process is transparent — you do not need to configure anything on the Minecraft server you play on.
+
+<Note>
+  Figura requires a valid, online Mojang account. Non-premium (cracked) accounts and offline-mode servers cannot upload or download avatars because Figura relies on Mojang authentication to verify account ownership.
+</Note>
+
+## Key capabilities
+
+<CardGroup cols={2}>
+  <Card title="Blockbench models" icon="cube">
+    Build your avatar using [Blockbench](https://www.blockbench.net/), the free 3D modelling tool. Full support for meshes, groups, textures, and animations.
+  </Card>
+  <Card title="Lua scripting" icon="scroll">
+    An optional Lua API lets you animate model parts, respond to game events, sync actions between players using pings, and much more.
+  </Card>
+  <Card title="Permission system" icon="shield">
+    A built-in trust and permission system lets every player control how much resource any avatar is allowed to use on their machine.
+  </Card>
+  <Card title="No server mod required" icon="server">
+    Your avatar is visible to all Figura users on any server — vanilla, modded, or otherwise — without any server-side installation.
+  </Card>
+</CardGroup>
+
+## Supported mod loaders
+
+Figura supports all major Minecraft Java Edition mod loaders:
+
+- **Fabric** — recommended; widest ecosystem compatibility
+- **Forge** — full support
+- **Quilt** — supported (Fabric builds run on Quilt)
+- **NeoForge** — supported
+
+The current build targets **Minecraft 1.20.1**. Check the download pages for the latest supported versions.
+
+## Download Figura
+
+<CardGroup cols={3}>
+  <Card title="Modrinth" icon="box" href="https://modrinth.com/mod/figura">
+    Download from Modrinth — the recommended source for Fabric and Quilt users.
+  </Card>
+  <Card title="CurseForge" icon="fire" href="https://curseforge.com/minecraft/mc-mods/figura">
+    Download from CurseForge — supports Fabric and Forge.
+  </Card>
+  <Card title="GitHub releases" icon="github" href="https://github.com/FiguraMC/Figura/releases/latest">
+    Download the latest release directly from GitHub.
+  </Card>
+</CardGroup>
+
+## Community
+
+Join the Figura community to share avatars, get help, and follow development:
+
+<CardGroup cols={2}>
+  <Card title="Discord server" icon="message-circle" href="https://discord.figuramc.org/">
+    The official FiguraMC Discord is the main hub for support, avatar showcases, and announcements.
+  </Card>
+  <Card title="Figura wiki" icon="book-open" href="https://wiki.figuramc.org/">
+    The community wiki covers the Lua API, tutorials, and advanced topics in depth.
+  </Card>
+</CardGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install Figura on Fabric, Forge, Quilt, or NeoForge.
+  </Card>
+  <Card title="Your first avatar" icon="person" href="/your-first-avatar">
+    Create and upload your first custom avatar step by step.
+  </Card>
+</CardGroup>

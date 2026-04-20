@@ -1,0 +1,154 @@
+---
+title: "NetworkingAPI — HTTP requests from avatars"
+description: "Reference for the net global: make HTTP requests from avatar scripts, configure request method and headers, and handle async responses via FiguraFuture."
+---
+
+The `net` global allows avatar scripts to make outbound HTTP requests. This capability is restricted: it is only available to the avatar's **own host** (the player wearing the avatar), only when networking is enabled in the Figura config, and only when the avatar has been granted the `NETWORKING` permission. Requests are also filtered through a configurable whitelist or blacklist of allowed domains.
+
+<Warning>
+Networking only works for the host of the avatar — other players viewing the avatar cannot trigger network calls. Always check `net.isNetworkingAllowed()` before making requests, and design your avatar to degrade gracefully when permission is absent.
+</Warning>
+
+---
+
+## `net` API
+
+### `net.http`
+
+A field on the `net` global that exposes the `HttpAPI` object used to build and send HTTP requests.
+
+```lua
+local request = net.http.request("https://example.com/api")
+```
+
+---
+
+## `net:isNetworkingAllowed()`
+
+Returns `true` if all three conditions are satisfied: the script is running as the host, networking is enabled in the config, and the avatar has the `NETWORKING` permission.
+
+```lua
+if net.isNetworkingAllowed() then
+    -- safe to make requests
+end
+```
+
+Returns `boolean`.
+
+---
+
+## `net:isLinkAllowed(url)`
+
+Returns `true` if the given URL is permitted by the current networking filter (whitelist/blacklist). Throws an error if called from a non-host context or if the URL is malformed. Only ports `80` (HTTP) and `443` (HTTPS) are permitted.
+
+```lua
+local ok = net.isLinkAllowed("https://api.example.com/data")
+```
+
+Returns `boolean`.
+
+---
+
+## `HttpAPI` — `net.http`
+
+### `net.http:request(uri)`
+
+Creates an `HttpRequestBuilder` for the given URI. The builder lets you configure the method, headers, and body before sending.
+
+```lua
+local builder = net.http.request("https://api.example.com/data")
+```
+
+Returns an `HttpRequestBuilder`.
+
+---
+
+## `HttpRequestBuilder` methods
+
+All configuration methods return `self` so calls can be chained.
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `builder:uri(uri)` | `HttpRequestBuilder` | Change the target URI |
+| `builder:method(method)` | `HttpRequestBuilder` | Set the HTTP method (default `"GET"`) |
+| `builder:body(data)` | `HttpRequestBuilder` | Set request body; accepts `FiguraInputStream` or `FiguraBuffer` |
+| `builder:header(name, value)` | `HttpRequestBuilder` | Set a request header; pass `nil` as value to remove |
+| `builder:getUri()` | `string` | Read back the current URI |
+| `builder:getMethod()` | `string` | Read back the current HTTP method |
+| `builder:getBody()` | object | Read back the current body |
+| `builder:getHeaders()` | table | Read back all configured headers |
+| `builder:send()` | `FiguraFuture<HttpResponse>` | Execute the request asynchronously |
+
+The following headers are blocked and will be silently ignored if set: `Host`, `X-Forwarded-Host`, `X-Host`.
+
+---
+
+## `HttpResponse` methods
+
+The `FiguraFuture` returned by `builder:send()` resolves to an `HttpResponse` object.
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `response:getData()` | `FiguraInputStream` | Response body as a readable stream |
+| `response:getResponseCode()` | `integer` | HTTP status code (e.g. `200`, `404`) |
+| `response:getHeaders()` | table | Response headers as a read-only table |
+
+---
+
+## Permissions and security
+
+| Condition | Behavior |
+|-----------|---------|
+| Script is not the host | Throws `"NetworkingAPI is only allowed in a host environment!"` |
+| Networking disabled in config | Throws `"Networking is disabled in config"` |
+| Avatar lacks `NETWORKING` permission | Throws `"This avatar doesn't have networking permissions"` |
+| URL not in allowed list | Throws with the blocked URL in the message |
+| Port is not 80 or 443 | Throws `"Port X not allowed"` |
+
+The domain filter has three modes (set in Figura config):
+- **Whitelist** — only listed domains are allowed
+- **Blacklist** — listed domains are blocked, all others allowed
+- **None** — all domains are allowed
+
+Networking activity is logged to `.minecraft/figura/logs/<date>.log`. Log level is configurable: file-only, file + logger, or file + logger + in-game chat.
+
+---
+
+## Examples
+
+```lua
+-- Guard all networking code
+if not net.isNetworkingAllowed() then return end
+
+-- Simple GET request
+net.http.request("https://api.example.com/status")
+    :send()
+    :andThen(function(response)
+        local code = response:getResponseCode()
+        local stream = response:getData()
+        log("Status: " .. code)
+    end)
+
+-- POST request with a JSON body and custom header
+local buf = data.createBuffer()
+buf:writeString('{"key":"value"}')
+buf:setPosition(0)
+
+net.http.request("https://api.example.com/submit")
+    :method("POST")
+    :header("Content-Type", "application/json")
+    :body(buf)
+    :send()
+    :andThen(function(response)
+        log("Response code: " .. response:getResponseCode())
+    end)
+
+-- Check if a specific URL is reachable before sending
+if net.isLinkAllowed("https://api.example.com/data") then
+    net.http.request("https://api.example.com/data"):send()
+end
+```
+
+<Note>
+`FiguraFuture:andThen(callback)` registers a callback that fires when the request completes. Callbacks run on Figura's async thread, so avoid calling game-state-mutating APIs directly inside them; instead store the result and consume it in a `TICK` or `RENDER` event.
+</Note>

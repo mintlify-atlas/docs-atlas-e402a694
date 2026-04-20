@@ -1,0 +1,103 @@
+---
+title: "Lua scripting in Figura — globals and sandbox"
+description: "Figura includes a sandboxed Lua 5.2 runtime. Add .lua files to your avatar folder to control animations, react to events, and interact with the world."
+---
+
+Figura embeds a sandboxed Lua 5.2 runtime directly inside your avatar. Any `.lua` files you place in your avatar folder are automatically loaded and executed when the avatar is equipped. Scripts can manipulate your model, respond to game events, synchronise state across players via pings, and display an interactive action wheel — all without touching the Minecraft server.
+
+## Script files
+
+Place one or more `.lua` files inside your avatar folder alongside `avatar.json`. Figura loads every `.lua` file it finds in that folder (and sub-folders). There is no required entry-point filename; all files run in an unspecified order, so avoid relying on load order across separate files.
+
+```lua
+-- script.lua — placed next to avatar.json
+vanilla_model.ALL:setVisible(false)
+```
+
+## Global APIs
+
+Figura injects a set of global tables into every script. You do not need to `require` them.
+
+| Global | Purpose |
+|---|---|
+| `events` | Register callbacks for game events (tick, render, key press, …) |
+| `animations` | Play and control Blockbench animations |
+| `vanilla_model` | Show or hide parts of the default player model |
+| `pings` | Define functions that run on all clients viewing the avatar |
+| `action_wheel` | Build a radial menu opened in-game by holding **B** |
+| `keybinds` | Bind Lua callbacks to keyboard keys |
+| `nameplate` | Customise the nametag shown above your head |
+| `sounds` | Play custom sounds |
+| `particles` | Spawn particles |
+| `renderer` | Control render settings such as shadow radius and camera offset |
+| `client` | Query client-side information (FPS, window size, …) |
+| `avatar` | Inspect avatar metadata and resource usage |
+| `world` | Read world data (biome, time, weather, block state, …) |
+| `player` | Access the avatar's player entity |
+| `host` | Perform host-only actions (send chat messages, set title, …) |
+
+## Execution model
+
+Scripts run on two main schedules:
+
+- **Tick** — once per client tick, 20 times per second. Use `events.TICK` for game-logic updates.
+- **Render** — once per rendered frame, which can be much faster than 20 Hz. Use `events.RENDER` when you need smooth interpolation. The callback receives `delta`, a `0`–`1` value representing progress between the previous and next tick.
+
+```lua
+local angle = 0
+
+events.TICK:register(function()
+    angle = angle + 5      -- advance 5 degrees per tick
+end)
+
+events.RENDER:register(function(delta)
+    -- smoothly interpolate between ticks
+    models.MyModel:setRot(0, angle + delta * 5, 0)
+end)
+```
+
+## Sandbox restrictions
+
+Figura's Lua environment is sandboxed for safety:
+
+- **No file I/O** — standard `io` and `os` libraries are not available.
+- **No arbitrary network access** — outbound HTTP is blocked unless a viewer has granted the `NETWORKING` permission and your script uses the `net` API.
+- **No `require` for external modules** — you can only `require` other `.lua` files within your own avatar folder.
+- **Memory and instruction limits** — each avatar has a CPU instruction budget per tick to prevent scripts from freezing the client.
+
+<Warning>
+Scripts that exceed the per-tick instruction limit are paused for that tick. Design compute-heavy operations to spread work over multiple ticks.
+</Warning>
+
+## Minimal example: hiding the vanilla model
+
+One of the most common first scripts is hiding Minecraft's built-in player model so only your custom Blockbench model is visible.
+
+```lua
+-- Hide the entire vanilla player model, armor, elytra, and held items.
+vanilla_model.ALL:setVisible(false)
+```
+
+To hide only specific parts:
+
+```lua
+vanilla_model.PLAYER:setVisible(false)   -- hide the player skin only
+vanilla_model.ARMOR:setVisible(false)    -- hide armor only
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Events" icon="bell" href="/lua/events">
+    Register callbacks for ticks, render frames, key presses, chat messages, and more.
+  </Card>
+  <Card title="Pings" icon="signal" href="/lua/pings">
+    Synchronise avatar state across all players viewing the avatar.
+  </Card>
+  <Card title="Action wheel" icon="circle-dot" href="/lua/action-wheel">
+    Build a radial action menu that appears when the player holds B.
+  </Card>
+  <Card title="Lua API reference" icon="book" href="/api/events">
+    Full reference for every API type, method, and field.
+  </Card>
+</CardGroup>

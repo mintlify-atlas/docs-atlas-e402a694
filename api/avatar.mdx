@@ -1,0 +1,692 @@
+---
+title: "AvatarAPI — avatar metadata, storage, and budgets"
+description: "The avatar global provides metadata about the running avatar, a key-value store for script state, and permission/budget introspection helpers."
+---
+
+The `avatar` global gives your script information about itself: its name, authors, file size, NBT data, and the permission level granted by the viewer. It also exposes a simple key-value store (`store`/`retrieve`) so scripts can share data between Lua files without polluting the global namespace.
+
+---
+
+## getNBT
+
+Returns the avatar's NBT compound tag converted to a Lua table. The table mirrors the structure of the avatar's `.nbt` file.
+
+<ResponseField name="return" type="table">
+  The avatar NBT as a nested Lua table.
+</ResponseField>
+
+```lua
+local nbt = avatar:getNBT()
+print(nbt["name"])
+```
+
+---
+
+## store
+
+Stores a value under a string key in the avatar's internal storage table.
+
+<ParamField path="body.key" type="string" required>
+  The key to store the value under. Must not be nil.
+</ParamField>
+
+<ParamField path="body.value" type="any">
+  The value to store. Pass `nil` to clear the key.
+</ParamField>
+
+<ResponseField name="return" type="AvatarAPI">
+  Returns the `AvatarAPI` instance for chaining.
+</ResponseField>
+
+```lua
+avatar:store("health", player:getHealth())
+```
+
+---
+
+## getUUID
+
+Returns the UUID of the player who owns this avatar.
+
+<ResponseField name="return" type="string">
+  UUID string in standard `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` format.
+</ResponseField>
+
+```lua
+print(avatar:getUUID())
+```
+
+---
+
+## getColor
+
+Returns the current avatar badge color as a hex string.
+
+<ResponseField name="return" type="string">
+  Hex color string, e.g. `"ff6090"`.
+</ResponseField>
+
+```lua
+local col = avatar:getColor()
+```
+
+---
+
+## setColor
+
+Sets the avatar badge color. Accepts either a `Vector3` of RGB components (0–1 range) or three separate `number` arguments. An optional `badgeName` string targets a specific badge slot instead of the default color.
+
+<ParamField path="body.color" type="Vector3 | number">
+  Either a `Vector3` with RGB values, or the red component as a number (0–1).
+</ParamField>
+
+<ParamField path="body.g" type="number">
+  Green component (0–1). Only used when passing individual numbers.
+</ParamField>
+
+<ParamField path="body.b" type="number">
+  Blue component (0–1). Only used when passing individual numbers.
+</ParamField>
+
+<ParamField path="body.badgeName" type="string">
+  Optional badge slot name. When provided, sets the color for that specific badge rather than the default avatar color.
+</ParamField>
+
+<ResponseField name="return" type="AvatarAPI">
+  Returns the `AvatarAPI` instance for chaining.
+</ResponseField>
+
+```lua
+-- Set default badge color to red
+avatar:setColor(1, 0, 0)
+
+-- Set color using a Vector3
+avatar:setColor(vec(0.5, 1, 0.5))
+
+-- Target a specific badge slot
+avatar:setColor(vec(0, 0.8, 1), "pride")
+```
+
+---
+
+## getBadges
+
+Returns a plain string representation of all badges associated with this avatar's owner.
+
+<ResponseField name="return" type="string">
+  Concatenated badge characters as a plain string.
+</ResponseField>
+
+```lua
+print(avatar:getBadges())
+```
+
+---
+
+## getVersion
+
+Returns the version string declared in the avatar's metadata.
+
+<ResponseField name="return" type="string">
+  Avatar version string, e.g. `"1.0.0"`.
+</ResponseField>
+
+```lua
+print(avatar:getVersion())
+```
+
+---
+
+## getAuthors
+
+Returns the authors field from the avatar's metadata.
+
+<ResponseField name="return" type="string">
+  Author(s) as a plain string.
+</ResponseField>
+
+```lua
+print(avatar:getAuthors())
+```
+
+---
+
+## getName
+
+Returns the avatar's display name.
+
+<ResponseField name="return" type="string">
+  The avatar name string.
+</ResponseField>
+
+```lua
+print(avatar:getName())
+```
+
+---
+
+## getEntityName
+
+Returns the name of the entity this avatar is attached to.
+
+<ResponseField name="return" type="string">
+  The entity display name.
+</ResponseField>
+
+```lua
+print(avatar:getEntityName())
+```
+
+---
+
+## getSize
+
+Returns the file size of the avatar in bytes.
+
+<ResponseField name="return" type="number">
+  File size in bytes as a double.
+</ResponseField>
+
+```lua
+print("Avatar size: " .. avatar:getSize() .. " bytes")
+```
+
+---
+
+## hasTexture
+
+Returns whether the avatar has at least one texture file.
+
+<ResponseField name="return" type="boolean">
+  `true` if the avatar contains a texture.
+</ResponseField>
+
+```lua
+if avatar:hasTexture() then
+  print("Has textures")
+end
+```
+
+---
+
+## hasScriptError
+
+Returns whether the avatar's script encountered an error on the last run.
+
+<ResponseField name="return" type="boolean">
+  `true` if a script error occurred.
+</ResponseField>
+
+```lua
+if avatar:hasScriptError() then
+  print("Script error detected")
+end
+```
+
+---
+
+## getPermissionLevel
+
+Returns the name of the permission category currently granted to this avatar by the viewer.
+
+<ResponseField name="return" type="string">
+  Category name, e.g. `"TRUSTED"`, `"DEFAULT"`, `"UNTRUSTED"`.
+</ResponseField>
+
+```lua
+print(avatar:getPermissionLevel())
+```
+
+---
+
+## getInitCount
+
+Returns the number of Lua instructions executed during avatar initialization (`init` phase, before entity is loaded).
+
+<ResponseField name="return" type="integer">
+  Instruction count.
+</ResponseField>
+
+```lua
+print("Init instructions: " .. avatar:getInitCount())
+```
+
+---
+
+## getEntityInitCount
+
+Returns the number of Lua instructions used during the entity-init phase (after entity is available).
+
+<ResponseField name="return" type="integer">
+  Instruction count.
+</ResponseField>
+
+```lua
+print(avatar:getEntityInitCount())
+```
+
+---
+
+## getMaxInitCount
+
+Returns the maximum allowed instructions for the init phase under the current permission level.
+
+<ResponseField name="return" type="integer">
+  Maximum instruction budget.
+</ResponseField>
+
+```lua
+print(avatar:getMaxInitCount())
+```
+
+---
+
+## getTickCount
+
+Returns the total number of Lua instructions consumed across all tick event calls so far.
+
+<ResponseField name="return" type="integer">
+  Cumulative tick instruction count.
+</ResponseField>
+
+```lua
+print(avatar:getTickCount())
+```
+
+---
+
+## getMaxTickCount
+
+Returns the maximum allowed instructions per tick under the current permission level.
+
+<ResponseField name="return" type="integer">
+  Tick instruction budget.
+</ResponseField>
+
+```lua
+print(avatar:getMaxTickCount())
+```
+
+---
+
+## getRenderCount
+
+Returns the total number of Lua instructions consumed across all render event calls so far.
+
+<ResponseField name="return" type="integer">
+  Cumulative render instruction count.
+</ResponseField>
+
+```lua
+print(avatar:getRenderCount())
+```
+
+---
+
+## getMaxRenderCount
+
+Returns the maximum allowed instructions per render call under the current permission level.
+
+<ResponseField name="return" type="integer">
+  Render instruction budget.
+</ResponseField>
+
+```lua
+print(avatar:getMaxRenderCount())
+```
+
+---
+
+## getWorldTickCount
+
+Returns the total instructions used in world-tick event calls.
+
+<ResponseField name="return" type="integer">
+  World tick instruction count.
+</ResponseField>
+
+```lua
+print(avatar:getWorldTickCount())
+```
+
+---
+
+## getMaxWorldTickCount
+
+Returns the maximum allowed instructions for world-tick events.
+
+<ResponseField name="return" type="integer">
+  World tick instruction budget.
+</ResponseField>
+
+```lua
+print(avatar:getMaxWorldTickCount())
+```
+
+---
+
+## getWorldRenderCount
+
+Returns the total instructions used in world-render event calls.
+
+<ResponseField name="return" type="integer">
+  World render instruction count.
+</ResponseField>
+
+```lua
+print(avatar:getWorldRenderCount())
+```
+
+---
+
+## getMaxWorldRenderCount
+
+Returns the maximum allowed instructions for world-render events.
+
+<ResponseField name="return" type="integer">
+  World render instruction budget.
+</ResponseField>
+
+```lua
+print(avatar:getMaxWorldRenderCount())
+```
+
+---
+
+## getComplexity
+
+Returns the current model part complexity count (number of rendered quads before the frame).
+
+<ResponseField name="return" type="integer">
+  Current complexity value.
+</ResponseField>
+
+```lua
+print("Complexity: " .. avatar:getComplexity())
+```
+
+---
+
+## getMaxComplexity
+
+Returns the maximum allowed model complexity under the current permission level.
+
+<ResponseField name="return" type="integer">
+  Complexity budget.
+</ResponseField>
+
+```lua
+print(avatar:getMaxComplexity())
+```
+
+---
+
+## getRemainingParticles
+
+Returns the number of particles the avatar is still allowed to spawn this tick.
+
+<ResponseField name="return" type="integer">
+  Remaining particle budget.
+</ResponseField>
+
+```lua
+print(avatar:getRemainingParticles())
+```
+
+---
+
+## getMaxParticles
+
+Returns the maximum number of particles the avatar may spawn per tick.
+
+<ResponseField name="return" type="integer">
+  Particle budget.
+</ResponseField>
+
+```lua
+print(avatar:getMaxParticles())
+```
+
+---
+
+## getRemainingSounds
+
+Returns the number of sounds the avatar is still allowed to play this tick.
+
+<ResponseField name="return" type="integer">
+  Remaining sound budget.
+</ResponseField>
+
+```lua
+print(avatar:getRemainingSounds())
+```
+
+---
+
+## getMaxSounds
+
+Returns the maximum number of sounds the avatar may play per tick.
+
+<ResponseField name="return" type="integer">
+  Sound budget.
+</ResponseField>
+
+```lua
+print(avatar:getMaxSounds())
+```
+
+---
+
+## getVolume
+
+Returns the avatar's allowed maximum volume level as an integer permission value.
+
+<ResponseField name="return" type="integer">
+  Volume permission value.
+</ResponseField>
+
+```lua
+print(avatar:getVolume())
+```
+
+---
+
+## getAnimationComplexity
+
+Returns the current animation instruction complexity count.
+
+<ResponseField name="return" type="integer">
+  Animation complexity count.
+</ResponseField>
+
+```lua
+print(avatar:getAnimationComplexity())
+```
+
+---
+
+## getMaxAnimationComplexity
+
+Returns the maximum allowed animation complexity.
+
+<ResponseField name="return" type="integer">
+  Animation complexity budget.
+</ResponseField>
+
+```lua
+print(avatar:getMaxAnimationComplexity())
+```
+
+---
+
+## getAnimationCount
+
+Returns the number of Lua instructions used in the animation phase.
+
+<ResponseField name="return" type="integer">
+  Animation instruction count.
+</ResponseField>
+
+```lua
+print(avatar:getAnimationCount())
+```
+
+---
+
+## getMaxAnimationCount
+
+Returns the maximum allowed animation instructions.
+
+<ResponseField name="return" type="integer">
+  Animation instruction budget.
+</ResponseField>
+
+```lua
+print(avatar:getMaxAnimationCount())
+```
+
+---
+
+## getBuffersCount
+
+Returns the number of currently open buffer objects for this avatar.
+
+<ResponseField name="return" type="integer">
+  Open buffer count.
+</ResponseField>
+
+```lua
+print(avatar:getBuffersCount())
+```
+
+---
+
+## getMaxBuffersCount
+
+Returns the maximum number of buffers the avatar is permitted to hold open simultaneously.
+
+<ResponseField name="return" type="integer">
+  Buffer count budget.
+</ResponseField>
+
+```lua
+print(avatar:getMaxBuffersCount())
+```
+
+---
+
+## getMaxTextureSize
+
+Returns the maximum texture dimension (in pixels) the avatar is allowed to use.
+
+<ResponseField name="return" type="integer">
+  Maximum texture size.
+</ResponseField>
+
+```lua
+print(avatar:getMaxTextureSize())
+```
+
+---
+
+## getMaxBufferSize
+
+Returns the maximum byte size of a single buffer the avatar may allocate.
+
+<ResponseField name="return" type="integer">
+  Maximum buffer byte size.
+</ResponseField>
+
+```lua
+print(avatar:getMaxBufferSize())
+```
+
+---
+
+## getCurrentInstructions
+
+Returns the number of Lua instructions executed in the current event callback so far.
+
+<ResponseField name="return" type="integer">
+  Current in-progress instruction count.
+</ResponseField>
+
+```lua
+print(avatar:getCurrentInstructions())
+```
+
+---
+
+## canEditVanillaModel
+
+Returns whether the current permission level allows the avatar to modify vanilla model parts.
+
+<ResponseField name="return" type="boolean">
+  `true` if vanilla model editing is permitted.
+</ResponseField>
+
+```lua
+if avatar:canEditVanillaModel() then
+  vanilla_model.HEAD:setVisible(false)
+end
+```
+
+---
+
+## canEditNameplate
+
+Returns whether the current permission level allows the avatar to modify the nameplate.
+
+<ResponseField name="return" type="boolean">
+  `true` if nameplate editing is permitted.
+</ResponseField>
+
+```lua
+if avatar:canEditNameplate() then
+  nameplate.ENTITY:setText("Hello!")
+end
+```
+
+---
+
+## canRenderOffscreen
+
+Returns whether the avatar is permitted to render offscreen (e.g. in render targets).
+
+<ResponseField name="return" type="boolean">
+  `true` if offscreen rendering is permitted.
+</ResponseField>
+
+```lua
+print(avatar:canRenderOffscreen())
+```
+
+---
+
+## canUseCustomSounds
+
+Returns whether the avatar is permitted to play custom sounds.
+
+<ResponseField name="return" type="boolean">
+  `true` if custom sounds are permitted.
+</ResponseField>
+
+```lua
+if avatar:canUseCustomSounds() then
+  sounds:playSound("my_sound", player:getPos())
+end
+```
+
+---
+
+## canHaveCustomSkull
+
+Returns whether the avatar is permitted to use a custom skull block rendering.
+
+<ResponseField name="return" type="boolean">
+  `true` if custom skull rendering is permitted.
+</ResponseField>
+
+```lua
+print(avatar:canHaveCustomSkull())
+```

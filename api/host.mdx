@@ -1,0 +1,688 @@
+---
+title: "HostAPI — host-only avatar player controls"
+description: "HostAPI exposes methods that only the avatar owner can invoke: chat, titles, clipboard, cursor, arm swing, statistics, screenshots, and screen inspection."
+---
+
+The `host` global in Figura scripts provides methods that affect or read state belonging to the local player — the avatar's owner. When a script runs on a viewer's machine (someone else watching your avatar), all host methods are harmless no-ops or return empty/`nil` values. Always check `host:isHost()` when you need to branch between host and viewer execution contexts.
+
+<Warning>
+  Methods that send chat messages (`sendChatMessage`, `sendChatCommand`) only function when the **Chat Messages** permission is enabled in Figura's trust settings.
+</Warning>
+
+## Identity
+
+### `isHost()`
+
+Returns `true` if the script is currently executing on the host player's machine.
+
+```lua
+if host:isHost() then
+  -- host-only logic
+end
+```
+
+**Returns:** `boolean`
+
+---
+
+## Cursor
+
+### `isCursorUnlocked()`
+
+Returns `true` if the cursor is currently unlocked (mouse is free).
+
+**Returns:** `boolean`
+
+---
+
+### `setUnlockCursor(boolean)`
+
+Locks or unlocks the mouse cursor. When unlocked, the cursor is visible and can be used to interact with custom HUD elements.
+
+<ParamField path="boolean" type="boolean" required>
+  `true` to unlock the cursor, `false` to lock it.
+</ParamField>
+
+```lua
+host:setUnlockCursor(true)   -- free cursor
+host:setUnlockCursor(false)  -- re-lock cursor
+```
+
+**Returns:** `HostAPI` (for chaining)
+
+---
+
+## Titles and action bar
+
+### `setTitle(text)`
+
+Displays a title on screen. Accepts a plain string or a JSON text component string.
+
+<ParamField path="text" type="string" required>
+  Text to display. JSON text components (e.g. `'{"text":"Hello","color":"gold"}'`) are parsed automatically.
+</ParamField>
+
+```lua
+host:setTitle('{"text":"Round Over","color":"red"}')
+```
+
+**Returns:** `HostAPI`
+
+---
+
+### `setSubtitle(text)`
+
+Displays a subtitle beneath the title. The title must also be set for the subtitle to appear.
+
+<ParamField path="text" type="string" required>
+  Text to display.
+</ParamField>
+
+```lua
+host:setTitle("Round Over"):setSubtitle("You lost!")
+```
+
+**Returns:** `HostAPI`
+
+---
+
+### `setActionbar(text[, animated])`
+
+Displays text in the action bar (the area above the hotbar).
+
+<ParamField path="text" type="string" required>
+  Text to display.
+</ParamField>
+<ParamField path="animated" type="boolean">
+  When `true`, the text fades in and out. Defaults to `false`.
+</ParamField>
+
+```lua
+host:setActionbar("Combo x3!", true)
+```
+
+**Returns:** `HostAPI`
+
+---
+
+### `setTitleTimes(timesData)` / `setTitleTimes(fadeIn, stay, fadeOut)`
+
+Sets the title display timings in ticks. Accepts either a `Vector3` or three separate integers.
+
+<ParamField path="fadeIn" type="integer">
+  Ticks to fade in.
+</ParamField>
+<ParamField path="stay" type="integer">
+  Ticks to remain visible.
+</ParamField>
+<ParamField path="fadeOut" type="integer">
+  Ticks to fade out.
+</ParamField>
+
+```lua
+host:setTitleTimes(10, 40, 10)
+host:setTitle("Go!")
+```
+
+**Returns:** `HostAPI`
+
+---
+
+### `clearTitle()`
+
+Clears any currently displayed title and subtitle immediately.
+
+```lua
+host:clearTitle()
+```
+
+**Returns:** `HostAPI`
+
+---
+
+## Chat
+
+### `sendChatMessage(message)`
+
+Sends a chat message as the host player. Requires the Chat Messages permission.
+
+<ParamField path="message" type="string" required>
+  The message text to send.
+</ParamField>
+
+```lua
+host:sendChatMessage("Hello, world!")
+```
+
+**Returns:** `HostAPI`
+
+---
+
+### `sendChatCommand(command)`
+
+Runs a slash command as the host player. The leading `/` is optional. Requires the Chat Messages permission.
+
+<ParamField path="command" type="string" required>
+  Command string, with or without a leading `/`.
+</ParamField>
+
+```lua
+host:sendChatCommand("say Hello from Figura!")
+host:sendChatCommand("/time set noon")
+```
+
+**Returns:** `HostAPI`
+
+---
+
+### `appendChatHistory(message)`
+
+Adds a string to the chat input history so the player can retrieve it with the up-arrow key.
+
+<ParamField path="message" type="string" required>
+  The text to add to history.
+</ParamField>
+
+**Returns:** `HostAPI`
+
+---
+
+### `getChatMessage(index)`
+
+Returns a table describing the chat message at the given 1-based index in the chat history, or `nil` if the index is out of range. Only available to the host.
+
+<ParamField path="index" type="integer" required>
+  1-based index into the chat message list.
+</ParamField>
+
+The returned table contains:
+
+| Key | Type | Description |
+|---|---|---|
+| `message` | string | Plain-text message content |
+| `json` | Component | Formatted component object |
+| `addedTime` | integer | GUI tick when the message was added |
+| `backgroundColor` | integer | Background color (packed RGB) |
+
+**Returns:** `table` or `nil`
+
+---
+
+### `setChatMessage(index[, newMessage[, backgroundColor]])`
+
+Replaces or removes a chat message at the given index. Passing `nil` for `newMessage` deletes the message.
+
+<ParamField path="index" type="integer" required>
+  1-based index of the message to modify.
+</ParamField>
+<ParamField path="newMessage" type="string">
+  Replacement text, or `nil` to remove the message.
+</ParamField>
+<ParamField path="backgroundColor" type="Vector3">
+  Background color as an RGB vector (`vec(r, g, b)` with values 0–1).
+</ParamField>
+
+**Returns:** `HostAPI`
+
+---
+
+### `getChatText()`
+
+Returns the text currently typed in the chat input box, or `nil` if the chat screen is not open.
+
+```lua
+local typed = host:getChatText()
+```
+
+**Returns:** `string` or `nil`
+
+---
+
+### `setChatText(text)`
+
+Sets the text in the chat input box. Only works when the chat screen is open and the Chat Messages permission is granted.
+
+<ParamField path="text" type="string" required>
+  Text to inject into the chat input.
+</ParamField>
+
+**Returns:** `HostAPI`
+
+---
+
+### `getChatColor()`
+
+Returns the packed integer color currently applied to the host player's outgoing chat messages, or `nil` if none is set.
+
+**Returns:** `integer` or `nil`
+
+---
+
+### `setChatColor([color])` / `setChatColor(r, g, b)`
+
+Sets the color of the host player's outgoing chat messages. Pass no argument or `nil` to clear the color.
+
+<ParamField path="color" type="Vector3">
+  RGB color vector (values 0–1). Can also be passed as three separate `r, g, b` numbers.
+</ParamField>
+
+```lua
+host:setChatColor(vec(1, 0.5, 0))  -- orange chat
+host:setChatColor(nil)              -- clear color
+```
+
+**Returns:** `HostAPI`
+
+---
+
+### `isChatOpen()`
+
+Returns `true` if the chat screen is currently open.
+
+**Returns:** `boolean`
+
+---
+
+### `isChatVerified()`
+
+Returns `true` if the host player's chat signing is verified by the server.
+
+**Returns:** `boolean`
+
+---
+
+## Inventory
+
+### `getSlot(slot)`
+
+Returns the `ItemStack` in the given inventory slot. `slot` can be a slot name string (e.g. `"mainhand"`, `"offhand"`, `"armor.head"`) or a zero-based integer index.
+
+<ParamField path="slot" type="string | integer" required>
+  Slot identifier.
+</ParamField>
+
+```lua
+local held = host:getSlot("mainhand")
+if held then
+  print(held:getName())
+end
+```
+
+**Returns:** `ItemStack` or `nil`
+
+---
+
+### `setSlot(slot[, item])`
+
+Sets the item in a given inventory slot. Only works in creative mode.
+
+<ParamField path="slot" type="string | integer" required>
+  Slot identifier.
+</ParamField>
+<ParamField path="item" type="ItemStack | string">
+  The item to place, as an `ItemStack` or item registry string. Pass `nil` to clear.
+</ParamField>
+
+```lua
+-- Creative-mode only
+host:setSlot("mainhand", world.newItem("minecraft:diamond_sword"))
+```
+
+**Returns:** `HostAPI`
+
+---
+
+### `getCursorItem()`
+
+Returns the `ItemStack` held on the cursor inside a container UI, or an empty item if none.
+
+**Returns:** `ItemStack`
+
+---
+
+## Screen inspection
+
+### `getScreen()`
+
+Returns the fully-qualified Java class name of the currently open GUI screen, or `nil` if no screen is open.
+
+```lua
+local screen = host:getScreen()
+if screen then
+  print("Open screen:", screen)
+end
+```
+
+**Returns:** `string` or `nil`
+
+---
+
+### `isContainerOpen()`
+
+Returns `true` if a container screen (chest, crafting table, etc.) is currently open.
+
+**Returns:** `boolean`
+
+---
+
+### `getScreenSlotCount()`
+
+Returns the number of slots in the currently open container screen, or `nil` if no container is open.
+
+**Returns:** `integer` or `nil`
+
+---
+
+### `getScreenSlot(slot)`
+
+Returns the `ItemStack` in the given slot of the currently open container screen, or `nil` if out of range or no container is open.
+
+<ParamField path="slot" type="string | integer" required>
+  Slot index (0-based integer or slot name string).
+</ParamField>
+
+**Returns:** `ItemStack` or `nil`
+
+---
+
+## Player state
+
+### `isJumping()`
+
+Returns `true` if the host player's jump key is currently held down.
+
+```lua
+if host:isJumping() then
+  -- jump key held
+end
+```
+
+**Returns:** `boolean`
+
+---
+
+### `isFlying()`
+
+Returns `true` if the host player is currently flying in creative or spectator mode.
+
+**Returns:** `boolean`
+
+---
+
+### `getAttackCharge()`
+
+Returns the attack strength charge of the host player's main hand, from `0.0` (fully uncharged) to `1.0` (fully charged).
+
+```lua
+local charge = host:getAttackCharge()
+```
+
+**Returns:** `number`
+
+---
+
+### `getReachDistance()`
+
+Returns the host player's current block/entity reach distance in blocks.
+
+**Returns:** `number`
+
+---
+
+### `getAir()`
+
+Returns the host player's current air supply in ticks.
+
+**Returns:** `integer`
+
+---
+
+### `getPickBlock()`
+
+Returns the block the host player's crosshair is targeting, in the same format as `entity:getTargetedBlock()`, or `nil` if not targeting a block.
+
+**Returns:** `BlockState, Vector3, string` or `nil`
+
+---
+
+### `getPickEntity()`
+
+Returns the `EntityAPI` for the entity the host player's crosshair is targeting, or `nil` if not targeting an entity.
+
+**Returns:** `EntityAPI` or `nil`
+
+---
+
+## Status effects
+
+### `getStatusEffects()`
+
+Returns a list of tables describing each active potion effect on the host player.
+
+Each entry contains:
+
+| Key | Type | Description |
+|---|---|---|
+| `name` | string | Effect description ID (e.g. `"effect.minecraft.speed"`) |
+| `amplifier` | integer | Amplifier level (0 = level I) |
+| `duration` | integer | Remaining duration in ticks |
+| `visible` | boolean | Whether the effect icon is visible |
+
+```lua
+for _, effect in ipairs(host:getStatusEffects()) do
+  print(effect.name, "amp:", effect.amplifier, "dur:", effect.duration)
+end
+```
+
+**Returns:** `table[]`
+
+---
+
+## Clipboard
+
+### `getClipboard()`
+
+Returns the system clipboard contents as a string, or `nil` if not the host.
+
+```lua
+local text = host:getClipboard()
+```
+
+**Returns:** `string` or `nil`
+
+---
+
+### `setClipboard(text)`
+
+Sets the system clipboard to the given string.
+
+<ParamField path="text" type="string" required>
+  Text to copy to the clipboard.
+</ParamField>
+
+```lua
+host:setClipboard("Copied from Figura!")
+```
+
+**Returns:** `HostAPI`
+
+---
+
+## Arm swing
+
+### `swingArm([offhand])`
+
+Triggers the arm swing animation for the host player.
+
+<ParamField path="offhand" type="boolean">
+  `true` to swing the off hand. Defaults to `false` (main hand).
+</ParamField>
+
+```lua
+host:swingArm()        -- main hand
+host:swingArm(true)    -- off hand
+```
+
+**Returns:** `HostAPI`
+
+---
+
+## Avatar
+
+### `isAvatarUploaded()`
+
+Returns `true` if the local avatar has been successfully uploaded to the Figura backend.
+
+```lua
+if host:isAvatarUploaded() then
+  print("Avatar is live.")
+end
+```
+
+**Returns:** `boolean`
+
+---
+
+## Logging
+
+### `writeToLog(string)`
+
+Writes an info-level message to the Minecraft log file prefixed with `[FIGURA/LUA]`.
+
+<ParamField path="string" type="string" required>
+  Message to write.
+</ParamField>
+
+```lua
+host:writeToLog("Script initialized.")
+```
+
+---
+
+### `warnToLog(string)`
+
+Writes a warning-level message to the Minecraft log file.
+
+<ParamField path="string" type="string" required>
+  Warning message to write.
+</ParamField>
+
+```lua
+host:warnToLog("Something unexpected happened.")
+```
+
+---
+
+## Screenshots
+
+### `screenshot(name)`
+
+Takes a screenshot of the current frame and returns it as a `FiguraTexture` object that can be used in avatar rendering. Only works for the host.
+
+<ParamField path="name" type="string" required>
+  A unique name to register the texture under.
+</ParamField>
+
+```lua
+local tex = host:screenshot("myCapture")
+```
+
+**Returns:** `FiguraTexture` or `nil`
+
+---
+
+## Statistics
+
+### `updateStatistics()`
+
+Sends a request to the server to refresh the player's statistics. The server may impose rate limits. Use before calling `getGeneralStatistics()` or `getItemStatistic()` to ensure fresh data.
+
+```lua
+host:updateStatistics()
+```
+
+---
+
+### `getGeneralStatistics()`
+
+Returns a table mapping statistic keys (e.g. `"jump"`, `"walk_one_cm"`) to their numeric values for the host player.
+
+```lua
+local stats = host:getGeneralStatistics()
+print("Jumps:", stats["jump"])
+```
+
+**Returns:** `{[string]: number}`
+
+---
+
+### `getItemStatistic(item)`
+
+Returns a table of item-specific statistics for the given item.
+
+<ParamField path="item" type="ItemStack | string" required>
+  An `ItemStack` object or an item registry string (e.g. `"minecraft:diamond_pickaxe"`).
+</ParamField>
+
+The returned table contains:
+
+| Key | Type | Description |
+|---|---|---|
+| `mined` | integer | Times the block form was mined |
+| `crafted` | integer | Times crafted |
+| `used` | integer | Times used |
+| `picked_up` | integer | Times picked up |
+| `broken` | integer | Times broken (durability depleted) |
+| `dropped` | integer | Times dropped |
+
+```lua
+host:updateStatistics()
+local stats = host:getItemStatistic("minecraft:diamond_pickaxe")
+print("Mined:", stats.mined, "Broken:", stats.broken)
+```
+
+**Returns:** `{[string]: integer}`
+
+---
+
+### `getEntityStatistic(type)`
+
+Returns kill statistics for the given entity type.
+
+<ParamField path="type" type="string" required>
+  Entity type registry string, e.g. `"minecraft:zombie"`.
+</ParamField>
+
+The returned table contains:
+
+| Key | Type | Description |
+|---|---|---|
+| `killed` | integer | Times the host player killed this entity type |
+| `killed_by` | integer | Times the host player was killed by this entity type |
+
+```lua
+host:updateStatistics()
+local zStats = host:getEntityStatistic("minecraft:zombie")
+print("Zombies killed:", zStats.killed)
+```
+
+**Returns:** `{[string]: integer}`
+
+---
+
+## Usage example
+
+```lua
+-- Show the player's remaining air as an action bar message when underwater
+function events.render(delta)
+  if not host:isHost() then return end
+
+  if player:isUnderwater() then
+    local air    = host:getAir()
+    local maxAir = player:getMaxAir()
+    host:setActionbar(
+      string.format("Air: %d / %d", air, maxAir)
+    )
+  end
+end
+```

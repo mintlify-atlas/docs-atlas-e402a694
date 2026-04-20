@@ -1,0 +1,192 @@
+---
+title: "SoundAPI — play Minecraft and custom avatar sounds"
+description: "Reference for the sounds global: play Minecraft sounds or custom avatar sounds, control volume and pitch, and manage sound instances from Lua scripts."
+---
+
+The `sounds` global lets avatar scripts play sounds at any world position. You can reference any Minecraft sound event by its resource location, or play custom sounds you have bundled in your avatar's `sounds/` folder. All playback is subject to the avatar's permission level; custom sounds additionally require the `CUSTOM_SOUNDS` permission.
+
+## `sounds` API
+
+### `sounds:playSound(id, pos[, volume[, pitch[, loop]]])`
+
+Plays a sound and returns a `Sound` object for further control.
+
+**Overloads:**
+
+```lua
+-- Minimal: id and position as a Vector3
+sounds:playSound("minecraft:entity.player.levelup", player:getPos())
+
+-- Full control with position vector
+sounds:playSound("minecraft:block.note_block.harp", player:getPos(), 1.0, 1.0, false)
+
+-- Position as separate numbers
+sounds:playSound("minecraft:ui.button.click", 0, 64, 0, 0.8, 1.2, false)
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `id` | `string` | required | Sound event ID or custom sound name |
+| `pos` | `Vector3` or x/y/z | required | World position to play the sound at |
+| `volume` | `number` | `1.0` | Loudness; capped to `1.0` by `VOLUME` permission |
+| `pitch` | `number` | `1.0` | Playback speed; `0.5` = half speed, `2.0` = double speed |
+| `loop` | `boolean` | `false` | Whether the sound loops until stopped |
+
+Returns a `Sound` instance (see [Sound object methods](#sound-object-methods) below).
+
+---
+
+### `sounds:stopSound([id])`
+
+Stops all currently-playing sounds from this avatar, or only the sound with the given `id` if provided.
+
+```lua
+sounds:stopSound()                   -- stop all avatar sounds
+sounds:stopSound("minecraft:music")  -- stop a specific sound
+```
+
+Returns `SoundAPI` (chainable).
+
+---
+
+### `sounds:newSound(name, data)`
+
+Register a new custom sound at runtime by providing raw audio data. `data` can be a Lua table of bytes or a Base64-encoded string.
+
+```lua
+-- From a base64 string
+sounds:newSound("myDynSound", base64String)
+
+-- From a byte table
+sounds:newSound("myDynSound", { 79, 103, 103, 83, ... })
+```
+
+Returns `SoundAPI` (chainable).
+
+---
+
+### `sounds:isPresent(id)`
+
+Returns `true` if the given sound ID exists — either as a registered Minecraft sound event or as a custom sound in this avatar.
+
+```lua
+if sounds:isPresent("minecraft:entity.creeper.primed") then
+    sounds:playSound("minecraft:entity.creeper.primed", player:getPos())
+end
+```
+
+Returns `boolean`.
+
+---
+
+### `sounds:getCustomSounds()`
+
+Returns a set of all custom sound names that have been loaded into this avatar.
+
+```lua
+for name in pairs(sounds:getCustomSounds()) do
+    print(name)
+end
+```
+
+Returns a set-like table of `string` keys.
+
+---
+
+## Sound object methods
+
+`sounds:playSound(...)` and `sounds[id]` return a `Sound` object with its own methods. All setters return `self` for chaining.
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `sound:play()` | `Sound` | Start (or unpause) playback |
+| `sound:pause()` | `Sound` | Pause playback without resetting position |
+| `sound:stop()` | `Sound` | Stop and release the sound |
+| `sound:isPlaying()` | `boolean` | Whether the sound is currently playing |
+| `sound:isLooping()` | `boolean` | Whether the sound is set to loop |
+| `sound:getPos()` | `Vector3` | Current playback position |
+| `sound:setPos(pos)` | `Sound` | Move the sound source (alias: `sound:pos(...)`) |
+| `sound:getVolume()` | `number` | Current volume |
+| `sound:setVolume(v)` | `Sound` | Set volume, clamped to `[0, 1]` (alias: `sound:volume(v)`) |
+| `sound:getPitch()` | `number` | Current pitch |
+| `sound:setPitch(p)` | `Sound` | Set pitch, minimum `0` (alias: `sound:pitch(p)`) |
+| `sound:getAttenuation()` | `number` | Current attenuation radius multiplier |
+| `sound:setAttenuation(a)` | `Sound` | Set attenuation, minimum `1` (alias: `sound:attenuation(a)`) |
+| `sound:getSubtitle()` | `string` | Subtitle text shown in closed captions |
+| `sound:setSubtitle(text)` | `Sound` | Set subtitle text, max 48 characters (alias: `sound:subtitle(text)`) |
+
+---
+
+## Sound ID format
+
+Minecraft sounds follow the `namespace:path` resource location format:
+
+```
+"minecraft:entity.player.levelup"
+"minecraft:block.note_block.harp"
+"minecraft:entity.experience_orb.pickup"
+"minecraft:ambient.cave"
+```
+
+Custom sounds bundled in your avatar are referenced by name alone (the filename without the `.ogg` extension). Place `.ogg` files in the `sounds/` folder inside your avatar:
+
+```
+MyAvatar/
+  script.lua
+  sounds/
+    mySound.ogg
+    footstep.ogg
+```
+
+Reference them in Lua:
+
+```lua
+sounds:playSound("mySound", player:getPos(), 0.8, 1.0, false)
+```
+
+---
+
+## Permissions
+
+| Permission | Effect |
+|-----------|--------|
+| `SOUNDS` | Rate-limits total sounds played per tick |
+| `VOLUME` | Scales the maximum allowed volume (0–100%) |
+| `CUSTOM_SOUNDS` | Must be enabled to play custom `.ogg` files from the avatar |
+
+---
+
+## Examples
+
+```lua
+-- Play a Minecraft sound at the player's position
+sounds:playSound(
+    "minecraft:entity.experience_orb.pickup",
+    player:getPos(),
+    1.0, 1.0, false
+)
+
+-- Play a custom avatar sound
+sounds:playSound("mySound", player:getPos(), 0.8, 1.0, false)
+
+-- Looping ambient sound that follows the player
+local ambient = sounds:playSound(
+    "minecraft:ambient.cave",
+    player:getPos(), 0.5, 1.0, true
+)
+
+events.TICK:register(function()
+    -- Keep the sound at the player's current position
+    ambient:setPos(player:getPos())
+end)
+
+-- Stop all sounds when the avatar is unloaded
+events.ENTITY_UNLOAD:register(function()
+    sounds:stopSound()
+end)
+
+-- Check if a sound exists before playing
+if sounds:isPresent("mySound") then
+    sounds:playSound("mySound", player:getPos())
+end
+```

@@ -1,0 +1,113 @@
+---
+title: "Figura trust tiers — limits and feature gates"
+description: "A detailed breakdown of Figura's five trust tiers — BLOCKED, LOW, DEFAULT, HIGH, and MAX — and the exact resource limits and feature gates each one applies."
+---
+
+Figura's trust system organises all permission values into five ordered categories. When you assign a trust level to a player, every permission for that player is set to the pre-defined value for that tier. You can further fine-tune individual permissions on top of the category baseline, but the category provides a fast, sensible starting point.
+
+The five categories map directly to indices 0–4 in `Permissions.java` and are named `BLOCKED`, `LOW`, `DEFAULT`, `HIGH`, and `MAX`.
+
+## Numeric limits by trust level
+
+The table below lists the default value for each numeric permission at every trust tier. `∞` means the permission resolves to `Integer.MAX_VALUE`, which Figura treats as unlimited.
+
+| Permission | BLOCKED (0) | LOW (1) | DEFAULT (2) | HIGH (3) | MAX (4) |
+|---|---|---|---|---|---|
+| `COMPLEXITY` | 0 | 512 | 2 048 | 4 096 | ∞ |
+| `PARTICLES` | 0 | 20 | 50 | 100 | ∞ |
+| `SOUNDS` | 0 | 5 | 20 | 100 | ∞ |
+| `VOLUME` | 0 | 100 | 100 | 100 | 100 |
+| `BB_ANIMATIONS` | 0 | 32 | 128 | 256 | ∞ |
+| `ANIMATION_INST` | 0 | 2 048 | 4 096 | 8 192 | ∞ |
+| `TEXTURE_SIZE` | 0 px | 128 px | 512 px | 2 048 px | 2 048 px |
+| `TICK_INST` | 0 | 4 096 | 8 192 | 32 768 | ∞ |
+| `RENDER_INST` | 0 | 4 096 | 8 192 | 32 768 | ∞ |
+| `INIT_INST` | 0 | 32 768 | 65 536 | 262 144 | ∞ |
+| `WORLD_TICK_INST` | 0 | 64 | 128 | 256 | ∞ |
+| `WORLD_RENDER_INST` | 0 | 32 | 64 | 256 | ∞ |
+| `BUFFER_SIZE` | 0 | 128 000 | 1 024 000 | 2 048 000 | ∞ |
+| `BUFFERS_COUNT` | 0 | 2 | 4 | 16 | 32 |
+
+<Note>
+  `TEXTURE_SIZE` is capped at 2 048 px even at MAX trust. The slider UI enforces a minimum floor of 64 px to prevent accidental zeroing.
+</Note>
+
+## Boolean features by trust level
+
+Toggle permissions unlock specific capabilities rather than controlling a numeric budget.
+
+| Feature | BLOCKED | LOW | DEFAULT | HIGH | MAX |
+|---|---|---|---|---|---|
+| `VANILLA_MODEL_EDIT` | off | **on** | **on** | **on** | **on** |
+| `CUSTOM_SOUNDS` | off | **on** | **on** | **on** | **on** |
+| `CANCEL_DAMAGE` | off | **on** | **on** | **on** | **on** |
+| `CUSTOM_SKULL` | off | **on** | **on** | **on** | **on** |
+| `NAMEPLATE_EDIT` | off | off | **on** | **on** | **on** |
+| `OFFSCREEN_RENDERING` | off | off | **on** | **on** | **on** |
+| `CANCEL_SOUNDS` | off | off | **on** | **on** | **on** |
+| `NETWORKING` | off | off | off | **on** | **on** |
+
+<Warning>
+  `NETWORKING` grants the avatar's Lua script the ability to make outbound HTTP requests. Only enable this for players whose avatars you actively trust, as it allows the script to contact arbitrary URLs.
+</Warning>
+
+## Tier-by-tier breakdown
+
+<AccordionGroup>
+  <Accordion title="BLOCKED (index 0) — complete silence">
+    All numeric limits are set to `0` and all boolean features are disabled. The avatar's Lua script cannot execute, no particles or sounds are emitted, and no model geometry above zero complexity is rendered.
+
+    Use BLOCKED for avatars that are causing performance problems or for players you do not want to interact with at all.
+  </Accordion>
+  <Accordion title="LOW (index 1) — conservative defaults">
+    A limited but functional set of resources. Most boolean capabilities are enabled (vanilla model editing, custom sounds, custom skulls, damage cancel), but nameplate editing, offscreen rendering, sound cancellation, and networking remain off.
+
+    This is the appropriate tier for unfamiliar players on a shared server where you want some protection but are willing to see basic avatars.
+  </Accordion>
+  <Accordion title="DEFAULT (index 2) — standard tier">
+    Moderate numeric budgets and the full set of non-networking toggles. Avatars can edit the nameplate, render offscreen, and cancel sounds.
+
+    This tier is the recommended starting point for most players and is what Figura assigns to new players by default (the exact default can be configured in client settings).
+  </Accordion>
+  <Accordion title="HIGH (index 3) — generous resources">
+    Large numeric budgets and networking enabled. Suitable for friends or community members whose avatar scripts you trust.
+  </Accordion>
+  <Accordion title="MAX (index 4) — no artificial caps">
+    Numeric permissions resolve to `Integer.MAX_VALUE` (unlimited), networking is on, and all toggles are enabled. Figura automatically assigns MAX trust to your own local avatar so it always renders at full fidelity on your own screen.
+
+    Reserve MAX for players whose avatar code you have reviewed or who you trust completely.
+  </Accordion>
+</AccordionGroup>
+
+## Adjusting trust in-game
+
+<Steps>
+  <Step title="Open the Figura menu">
+    Press the Figura keybind to open the mod's GUI.
+  </Step>
+  <Step title="Go to the permissions panel">
+    Select the **Permissions** tab to see a list of players and their current trust categories.
+  </Step>
+  <Step title="Select a player">
+    Click the player whose trust you want to change. Their current category and individual permission overrides are shown on the right.
+  </Step>
+  <Step title="Change the category">
+    Use the left/right arrows or slider to move the player between BLOCKED, LOW, DEFAULT, HIGH, and MAX. The change applies immediately without reloading.
+  </Step>
+  <Step title="Override individual permissions (optional)">
+    You can drag individual sliders or toggle individual capabilities independently of the category. This lets you, for example, keep a player at LOW trust but disable their sounds entirely.
+  </Step>
+</Steps>
+
+## Designing avatars for lower trust
+
+<Tip>
+  Avatar authors do not control the trust level viewers assign to their avatar — that decision belongs entirely to each viewer. Design your avatar to degrade gracefully when limits are applied.
+</Tip>
+
+Practical strategies:
+
+- **Check instruction budgets.** Keep per-tick Lua work well under the LOW tier limits (`TICK_INST = 4 096`) so the avatar behaves correctly for most viewers.
+- **Cap your own particle and sound calls.** Viewers at LOW trust see at most 20 particles and 5 sounds per tick anyway; emitting more wastes CPU without any visual benefit for them.
+- **Keep model complexity reasonable.** A `COMPLEXITY` limit of `512` at LOW and `2 048` at DEFAULT means highly detailed models may be cut off for untrusted viewers. Provide a simpler fallback or clearly document the recommended trust level in your avatar's description.
+- **Avoid depending on `NETWORKING` or `NAMEPLATE_EDIT` for core functionality**, as many viewers will not grant HIGH trust. Treat those features as optional enhancements.

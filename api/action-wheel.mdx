@@ -1,0 +1,596 @@
+---
+title: "ActionWheelAPI — build an in-game radial menu"
+description: "The action_wheel global controls the radial menu for the avatar's host player. Use it to create pages, add actions, and respond to clicks and scrolls."
+---
+
+The `action_wheel` global controls the radial menu that the host player can open while wearing the avatar (default key: **B**). You build the wheel by creating a `Page`, adding `Action` objects to it, then setting that page as active. Pages support up to 8 action slots at a time; additional actions are placed in further slot groups navigated by scrolling.
+
+---
+
+## ActionWheelAPI methods
+
+These methods are available on the top-level `action_wheel` global.
+
+### newAction
+
+Creates a new standalone `Action` that is not attached to any page. You can later add it to a page with `page:setAction`.
+
+<ResponseField name="return" type="Action">
+  A new, unconfigured `Action` object.
+</ResponseField>
+
+```lua
+local myAction = action_wheel:newAction()
+myAction:title("Do something"):onLeftClick(function() print("clicked!") end)
+```
+
+---
+
+### newPage
+
+Creates a new `Page` object. If a `title` string is provided the page is also registered by that name and can be retrieved later with `getPage`.
+
+<ParamField path="title" type="string">
+  Optional name to register this page under. Must be unique.
+</ParamField>
+
+<ResponseField name="return" type="Page">
+  The newly created `Page`.
+</ResponseField>
+
+```lua
+local mainPage = action_wheel:newPage("main")
+```
+
+---
+
+### setPage
+
+Sets the active page displayed when the action wheel opens. Accepts either a `Page` object or the string title of a previously registered page. Pass `nil` to clear the active page.
+
+<ParamField path="page" type="Page | string">
+  The page object or registered title string. `nil` clears the current page.
+</ParamField>
+
+<ResponseField name="return" type="ActionWheelAPI">
+  Returns itself for chaining.
+</ResponseField>
+
+```lua
+action_wheel:setPage("main")
+-- or
+action_wheel:setPage(mainPage)
+```
+
+---
+
+### getPage
+
+Returns a page by its registered title string, or a table of all registered pages when called with no argument.
+
+<ParamField path="pageTitle" type="string">
+  Optional title of the page to retrieve.
+</ParamField>
+
+<ResponseField name="return" type="Page | table">
+  The named `Page`, or a table mapping all registered page titles to their `Page` objects.
+</ResponseField>
+
+```lua
+local p = action_wheel:getPage("main")
+```
+
+---
+
+### getCurrentPage
+
+Returns the currently active page, or `nil` if no page is set.
+
+<ResponseField name="return" type="Page | nil">
+  The active `Page`.
+</ResponseField>
+
+```lua
+local current = action_wheel:getCurrentPage()
+```
+
+---
+
+### isEnabled
+
+Returns whether the action wheel is currently open. Only meaningful for the host player; always returns `false` for others.
+
+<ResponseField name="return" type="boolean">
+  `true` if the wheel is open.
+</ResponseField>
+
+```lua
+if action_wheel:isEnabled() then
+    print("Wheel is open")
+end
+```
+
+---
+
+### getSelected
+
+Returns the 1-based index of the currently highlighted slot, or `0` if the caller is not the host.
+
+<ResponseField name="return" type="integer">
+  Slot index 1–8, or `0`.
+</ResponseField>
+
+```lua
+local slot = action_wheel:getSelected()
+```
+
+---
+
+### getSelectedAction
+
+Returns the `Action` object currently highlighted in the open wheel, or `nil` if the wheel is closed, no page is set, or the caller is not the host.
+
+<ResponseField name="return" type="Action | nil">
+  The highlighted `Action`.
+</ResponseField>
+
+```lua
+local act = action_wheel:getSelectedAction()
+```
+
+---
+
+### execute
+
+Programmatically executes the action at the given slot index, simulating a left- or right-click. Only runs for the host.
+
+<ParamField path="index" type="integer">
+  Optional 1-based slot index (1–8). Defaults to the currently selected slot.
+</ParamField>
+
+<ParamField path="rightClick" type="boolean">
+  `true` to simulate a right-click. Defaults to `false` (left-click).
+</ParamField>
+
+<ResponseField name="return" type="ActionWheelAPI">
+  Returns itself for chaining.
+</ResponseField>
+
+```lua
+action_wheel:execute(1, false) -- left-click slot 1
+```
+
+---
+
+## ActionWheelAPI fields
+
+The following function fields can be assigned directly on the `action_wheel` global. They fire when the wheel receives global input, regardless of which action is highlighted.
+
+| Field | Type | Description |
+|---|---|---|
+| `leftClick` | `function` | Called when the player left-clicks the wheel. |
+| `rightClick` | `function` | Called when the player right-clicks the wheel. |
+| `scroll` | `function(delta)` | Called on scroll; receives the scroll delta. |
+
+---
+
+## Page methods
+
+A `Page` holds up to 8 visible action slots at a time. If you add more than 8 actions they are placed into additional slot groups; call `setSlotsShift` to navigate between groups.
+
+### newAction
+
+Creates a new `Action`, places it in this page at the given slot index, and returns it. If no index is given the first empty slot is used.
+
+<ParamField path="index" type="integer">
+  Optional 1-based slot index. Defaults to the first available slot.
+</ParamField>
+
+<ResponseField name="return" type="Action">
+  The new `Action` added to this page.
+</ResponseField>
+
+```lua
+local act = mainPage:newAction()         -- first free slot
+local act2 = mainPage:newAction(3)       -- slot 3
+```
+
+---
+
+### getAction
+
+Returns the `Action` at the given 1-based index, or `nil` if that slot is empty.
+
+<ParamField path="index" type="integer" required>
+  1-based slot index.
+</ParamField>
+
+<ResponseField name="return" type="Action | nil">
+  The `Action` at that slot.
+</ResponseField>
+
+```lua
+local act = mainPage:getAction(2)
+```
+
+---
+
+### setAction
+
+Places an existing `Action` into a slot on this page. Use index `-1` or `nil` to append to the first free slot.
+
+<ParamField path="index" type="integer">
+  1-based slot index, or `-1` / `nil` for the first free slot.
+</ParamField>
+
+<ParamField path="action" type="Action" required>
+  The `Action` to place.
+</ParamField>
+
+<ResponseField name="return" type="Page">
+  Returns itself for chaining.
+</ResponseField>
+
+```lua
+mainPage:setAction(1, myAction)
+-- alias:
+mainPage:action(1, myAction)
+```
+
+---
+
+### getActions
+
+Returns the actions visible in the given slot group (shift), or all actions in the page as a table when called with no argument.
+
+<ParamField path="shift" type="integer">
+  Optional 1-based slot group index.
+</ParamField>
+
+<ResponseField name="return" type="table">
+  List of up to 8 actions (with shift), or a map of all slot indices to actions.
+</ResponseField>
+
+---
+
+### getTitle
+
+Returns the title string this page was registered with, or `nil` if it was created without a title.
+
+<ResponseField name="return" type="string | nil">
+  The page title.
+</ResponseField>
+
+```lua
+print(mainPage:getTitle())
+```
+
+---
+
+### getSlotsShift
+
+Returns the current 1-based slot group index being displayed.
+
+<ResponseField name="return" type="integer">
+  Current slot group (1 = first 8 slots).
+</ResponseField>
+
+---
+
+### setSlotsShift
+
+Sets which group of 8 slots is currently shown, clamped to valid bounds.
+
+<ParamField path="shift" type="integer" required>
+  1-based slot group index.
+</ParamField>
+
+<ResponseField name="return" type="Page">
+  Returns itself for chaining.
+</ResponseField>
+
+```lua
+mainPage:setSlotsShift(2) -- show slots 9–16
+-- alias:
+mainPage:slotsShift(2)
+```
+
+---
+
+### shouldKeepSlots / setKeepSlots
+
+`keepSlots` controls whether the current slot group is preserved when the page is re-activated via `setPage`. When `false` (the default), the page resets to slot group 1 every time it is opened.
+
+```lua
+mainPage:setKeepSlots(true)
+print(mainPage:shouldKeepSlots()) -- true
+```
+
+---
+
+## Action methods
+
+An `Action` represents a single slot in the wheel. Most setter methods return the `Action` itself to allow chaining and have a short alias that mirrors the property name.
+
+### setTitle / getTitle
+
+Sets or gets the display title of the action. Returns the toggle title when the action is toggled (if one is set).
+
+<ParamField path="title" type="string">
+  The title text.
+</ParamField>
+
+```lua
+myAction:setTitle("Wings")
+-- alias:
+myAction:title("Wings")
+print(myAction:getTitle())
+```
+
+---
+
+### setItem / getItem (via source)
+
+Sets the item rendered as the icon for this action. Accepts an `ItemStack` or a string item ID. Clears any model part icon that was previously set.
+
+<ParamField path="item" type="ItemStack | string">
+  Item to display. Pass a string like `"minecraft:diamond"` or an `ItemStack` object.
+</ParamField>
+
+```lua
+myAction:setItem("minecraft:feather")
+-- alias:
+myAction:item("minecraft:feather")
+```
+
+---
+
+### setHoverItem
+
+Sets the item icon shown when this slot is highlighted. Falls back to `setItem` when not hovered.
+
+```lua
+myAction:setHoverItem("minecraft:arrow")
+-- alias:
+myAction:hoverItem("minecraft:arrow")
+```
+
+---
+
+### setPart / setHoverPart
+
+Sets a model part to render as the slot icon. Calling this clears any item icon. `setHoverPart` is shown while the slot is highlighted.
+
+```lua
+myAction:setPart(models.MyModel.WingsPart)
+-- alias:
+myAction:part(models.MyModel.WingsPart)
+```
+
+---
+
+### setTexture / setHoverTexture
+
+Sets a texture region as the slot icon.
+
+<ParamField path="texture" type="Texture" required>
+  The `Texture` resource to draw.
+</ParamField>
+
+<ParamField path="u" type="number">
+  U coordinate (default `0`).
+</ParamField>
+
+<ParamField path="v" type="number">
+  V coordinate (default `0`).
+</ParamField>
+
+<ParamField path="width" type="integer">
+  Width in pixels (defaults to full texture width).
+</ParamField>
+
+<ParamField path="height" type="integer">
+  Height in pixels (defaults to full texture height).
+</ParamField>
+
+<ParamField path="scale" type="number">
+  Scale multiplier (default `1.0`).
+</ParamField>
+
+---
+
+### setColor / getColor
+
+Sets the background tint color of the slot icon using RGB components (0–1 range). Also accepts a `Vector3`.
+
+```lua
+myAction:setColor(1, 0.5, 0)
+-- alias:
+myAction:color(1, 0.5, 0)
+print(myAction:getColor())
+```
+
+---
+
+### setHoverColor / getHoverColor
+
+Sets the tint shown while the slot is highlighted. Defaults to white `(1, 1, 1)` if not explicitly set.
+
+```lua
+myAction:setHoverColor(0.8, 0.8, 1)
+-- alias:
+myAction:hoverColor(0.8, 0.8, 1)
+```
+
+---
+
+### setOnLeftClick / onLeftClick
+
+Sets the function called when the player left-clicks this action. The function receives the `Action` as its argument.
+
+<ParamField path="leftFunction" type="function">
+  Callback receiving the `Action`.
+</ParamField>
+
+```lua
+myAction:setOnLeftClick(function(action)
+    print("Left clicked!")
+end)
+-- alias:
+myAction:onLeftClick(function() end)
+```
+
+---
+
+### setOnRightClick / onRightClick
+
+Sets the function called when the player right-clicks this action.
+
+```lua
+myAction:onRightClick(function(action)
+    print("Right clicked!")
+end)
+```
+
+---
+
+### setOnToggle / onToggle
+
+Sets the function called when the action is toggled **on** (first left-click after being untoggled). The function receives `toggled` (boolean) and the `Action`.
+
+```lua
+myAction:onToggle(function(toggled, action)
+    print("Toggled: " .. tostring(toggled))
+end)
+```
+
+---
+
+### setOnUntoggle / onUntoggle
+
+Sets a separate function called when the action is toggled **off**. If not set, `onToggle` is called for both states.
+
+```lua
+myAction:onUntoggle(function(toggled, action)
+    print("Untoggled")
+end)
+```
+
+---
+
+### setOnScroll / onScroll
+
+Sets the function called when the player scrolls while this slot is highlighted. Receives the scroll delta.
+
+```lua
+myAction:onScroll(function(delta, action)
+    print("Scroll: " .. delta)
+end)
+```
+
+---
+
+### setToggled / isToggled / toggled
+
+Manually sets or reads the toggle state.
+
+```lua
+myAction:setToggled(true)
+-- alias:
+myAction:toggled(true)
+print(myAction:isToggled())
+```
+
+---
+
+### setToggleTitle / getToggleTitle / toggleTitle
+
+Sets the title shown when the action is in the toggled state.
+
+```lua
+myAction:setToggleTitle("Hide Wings")
+-- alias:
+myAction:toggleTitle("Hide Wings")
+```
+
+---
+
+### setToggleColor / getToggleColor / toggleColor
+
+Sets the icon tint shown in the toggled state. Defaults to green `(0, 1, 0)` if not set.
+
+```lua
+myAction:setToggleColor(0, 0.8, 0)
+-- alias:
+myAction:toggleColor(0, 0.8, 0)
+```
+
+---
+
+### setToggleItem / toggleItem
+
+Sets the item icon shown when the action is in the toggled state.
+
+```lua
+myAction:setToggleItem("minecraft:barrier")
+-- alias:
+myAction:toggleItem("minecraft:barrier")
+```
+
+---
+
+### setTogglePart / togglePart
+
+Sets the model part icon shown when the action is in the toggled state.
+
+---
+
+### setToggleTexture / toggleTexture
+
+Sets the texture icon shown when the action is in the toggled state.
+
+---
+
+## Action fields
+
+These function fields can be set directly on an `Action` object.
+
+| Field | Type | Description |
+|---|---|---|
+| `leftClick` | `function` | Fired on left-click. |
+| `rightClick` | `function` | Fired on right-click. |
+| `toggle` | `function` | Fired when toggled on (and for toggle-off if `untoggle` is not set). |
+| `untoggle` | `function` | Fired when toggled off. |
+| `scroll` | `function(delta)` | Fired on scroll. |
+
+---
+
+## Complete example
+
+```lua
+-- Build the action wheel on avatar load
+local page = action_wheel:newPage("main")
+action_wheel:setPage(page)
+
+local wingsVisible = true
+
+local wingsAction = page:newAction()
+wingsAction
+    :title("Toggle Wings")
+    :toggleTitle("Show Wings")
+    :item("minecraft:feather")
+    :toggleItem("minecraft:barrier")
+    :onToggle(function(state)
+        wingsVisible = not state
+        models.MyAvatar.Wings:setVisible(wingsVisible)
+    end)
+
+local emoteAction = page:newAction()
+emoteAction
+    :title("Wave")
+    :item("minecraft:paper")
+    :onLeftClick(function()
+        -- trigger wave animation
+        animations.MyAvatar.Wave:play()
+    end)
+```

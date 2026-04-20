@@ -1,0 +1,1232 @@
+---
+title: "ClientAPI — Minecraft client and game state info"
+description: "The client global provides read-only access to Minecraft client state: FPS, version, window size, camera, text dimensions, server info, memory, and more."
+---
+
+The `client` global gives your script read-only access to the Minecraft client's current state. All methods on this API are static — they can be called directly on `client` without the colon syntax, though both styles work. Use this API to query FPS, system time, window dimensions, camera position, server information, memory usage, loaded mods, and many other runtime values.
+
+---
+
+## getFPS
+
+Returns the current rendered frames per second as an integer parsed from Minecraft's internal FPS string.
+
+<ResponseField name="return" type="integer">
+  Current FPS. Returns `0` if the FPS string is empty.
+</ResponseField>
+
+```lua
+print("FPS: " .. client.getFPS())
+```
+
+---
+
+## getFPSString
+
+Returns the full Minecraft FPS debug string exactly as shown in the F3 overlay.
+
+<ResponseField name="return" type="string">
+  Full FPS debug string, e.g. `"60 fps T: 120 vsync fancy-clouds"`.
+</ResponseField>
+
+```lua
+print(client.getFPSString())
+```
+
+---
+
+## isPaused
+
+Returns whether the game is currently paused.
+
+<ResponseField name="return" type="boolean">
+  `true` if the game is paused.
+</ResponseField>
+
+```lua
+if client.isPaused() then
+  print("Game is paused")
+end
+```
+
+---
+
+## getVersion
+
+Returns the Minecraft version ID string.
+
+<ResponseField name="return" type="string">
+  Version ID string, e.g. `"1.20.1"`.
+</ResponseField>
+
+```lua
+print(client.getVersion())
+```
+
+---
+
+## getVersionName
+
+Returns the human-readable Minecraft version name.
+
+<ResponseField name="return" type="string">
+  Version name string.
+</ResponseField>
+
+```lua
+print(client.getVersionName())
+```
+
+---
+
+## isSnapshot
+
+Returns whether the current Minecraft version is a snapshot (unstable) build.
+
+<ResponseField name="return" type="boolean">
+  `true` if running a snapshot version.
+</ResponseField>
+
+```lua
+if client.isSnapshot() then
+  print("Running a snapshot!")
+end
+```
+
+---
+
+## getClientBrand
+
+Returns the client brand string reported by the Minecraft client.
+
+<ResponseField name="return" type="string">
+  Client brand, e.g. `"vanilla"` or the loader name for modded installs.
+</ResponseField>
+
+```lua
+print(client.getClientBrand())
+```
+
+---
+
+## getServerBrand
+
+Returns the server brand string reported by the current server. Returns `"Integrated"` for singleplayer worlds.
+
+<ResponseField name="return" type="string | nil">
+  Server brand string, or `nil` if no world is loaded.
+</ResponseField>
+
+```lua
+print(client.getServerBrand())
+```
+
+---
+
+## getChunkStatistics
+
+Returns the chunk statistics debug string (as shown in the F3 overlay).
+
+<ResponseField name="return" type="string">
+  Chunk statistics string.
+</ResponseField>
+
+```lua
+print(client.getChunkStatistics())
+```
+
+---
+
+## getEntityStatistics
+
+Returns the entity statistics debug string (as shown in the F3 overlay).
+
+<ResponseField name="return" type="string">
+  Entity statistics string.
+</ResponseField>
+
+```lua
+print(client.getEntityStatistics())
+```
+
+---
+
+## getSoundStatistics
+
+Returns the sound engine debug string.
+
+<ResponseField name="return" type="string">
+  Sound statistics string.
+</ResponseField>
+
+```lua
+print(client.getSoundStatistics())
+```
+
+---
+
+## getEntityCount
+
+Returns the number of entities currently loaded in the client world.
+
+<ResponseField name="return" type="integer">
+  Entity count. Returns `0` if no world is loaded.
+</ResponseField>
+
+```lua
+print("Entities loaded: " .. client.getEntityCount())
+```
+
+---
+
+## getParticleCount
+
+Returns the particle count debug string from the particle engine.
+
+<ResponseField name="return" type="string">
+  Particle count string.
+</ResponseField>
+
+```lua
+print(client.getParticleCount())
+```
+
+---
+
+## getCurrentEffect
+
+Returns the name of the currently active post-processing shader effect, or `nil` if none is active.
+
+<ResponseField name="return" type="string | nil">
+  Active shader effect name, or `nil`.
+</ResponseField>
+
+```lua
+local effect = client.getCurrentEffect()
+if effect then
+  print("Active effect: " .. effect)
+end
+```
+
+---
+
+## getJavaVersion
+
+Returns the Java runtime version string.
+
+<ResponseField name="return" type="string">
+  Java version, e.g. `"17.0.3"`.
+</ResponseField>
+
+```lua
+print(client.getJavaVersion())
+```
+
+---
+
+## getUsedMemory
+
+Returns the number of bytes of heap memory currently in use by the JVM.
+
+<ResponseField name="return" type="integer">
+  Used memory in bytes.
+</ResponseField>
+
+```lua
+print("Used memory: " .. client.getUsedMemory() .. " bytes")
+```
+
+---
+
+## getMaxMemory
+
+Returns the maximum heap memory the JVM is allowed to use, in bytes.
+
+<ResponseField name="return" type="integer">
+  Maximum memory in bytes.
+</ResponseField>
+
+```lua
+print("Max memory: " .. client.getMaxMemory())
+```
+
+---
+
+## getAllocatedMemory
+
+Returns the total heap memory currently allocated by the JVM (committed memory), in bytes.
+
+<ResponseField name="return" type="integer">
+  Allocated memory in bytes.
+</ResponseField>
+
+```lua
+print("Allocated: " .. client.getAllocatedMemory())
+```
+
+---
+
+## isWindowFocused
+
+Returns whether the Minecraft window currently has OS focus.
+
+<ResponseField name="return" type="boolean">
+  `true` if the window is active/focused.
+</ResponseField>
+
+```lua
+if client.isWindowFocused() then
+  -- handle input
+end
+```
+
+---
+
+## isHudEnabled
+
+Returns whether the HUD is currently visible (F1 toggle state).
+
+<ResponseField name="return" type="boolean">
+  `true` if the HUD is visible.
+</ResponseField>
+
+```lua
+if client.isHudEnabled() then
+  -- draw custom HUD elements
+end
+```
+
+---
+
+## isDebugOverlayEnabled
+
+Returns whether the F3 debug overlay is currently shown.
+
+<ResponseField name="return" type="boolean">
+  `true` if the debug overlay is visible.
+</ResponseField>
+
+```lua
+print(client.isDebugOverlayEnabled())
+```
+
+---
+
+## getWindowSize
+
+Returns the window dimensions in pixels. Pass `true` to get the raw framebuffer size; pass `false` or nothing to get the GUI-scaled screen size.
+
+<ParamField path="body.originalSize" type="boolean">
+  When `true`, returns the raw framebuffer dimensions. When `false` or `nil`, returns the scaled screen size.
+</ParamField>
+
+<ResponseField name="return" type="Vector2">
+  Window width and height as a `Vector2`.
+</ResponseField>
+
+```lua
+local size = client.getWindowSize(false)
+print(size.x, size.y)
+```
+
+---
+
+## getFOV
+
+Returns the current field of view in degrees. Pass `true` to get the actual computed FOV including speed/zoom effects; pass `false` to get the raw option value.
+
+<ParamField path="body.trueFOV" type="boolean" required>
+  `true` to get the actual computed FOV; `false` to get the configured options FOV.
+</ParamField>
+
+<ResponseField name="return" type="number">
+  FOV in degrees.
+</ResponseField>
+
+```lua
+print("FOV: " .. client.getFOV(false))
+```
+
+---
+
+## getSystemTime
+
+Returns the current system time in milliseconds since the Unix epoch.
+
+<ResponseField name="return" type="integer">
+  System time in milliseconds.
+</ResponseField>
+
+```lua
+local t = client.getSystemTime()
+print("Time: " .. t)
+```
+
+---
+
+## getMousePos
+
+Returns the current mouse cursor position in screen pixels.
+
+<ResponseField name="return" type="Vector2">
+  Mouse X and Y position as a `Vector2`.
+</ResponseField>
+
+```lua
+local pos = client.getMousePos()
+print(pos.x, pos.y)
+```
+
+---
+
+## getScaledWindowSize
+
+Returns the GUI-scaled window dimensions (equivalent to `getWindowSize(false)`).
+
+<ResponseField name="return" type="Vector2">
+  Scaled width and height as a `Vector2`.
+</ResponseField>
+
+```lua
+local screen = client.getScaledWindowSize()
+print(screen.x .. "x" .. screen.y)
+```
+
+---
+
+## getGuiScale
+
+Returns the current GUI scale factor.
+
+<ResponseField name="return" type="number">
+  GUI scale multiplier (e.g. `2.0` for 2× scaling).
+</ResponseField>
+
+```lua
+print("GUI scale: " .. client.getGuiScale())
+```
+
+---
+
+## getCameraPos
+
+Returns the world-space position of the main camera.
+
+<ResponseField name="return" type="Vector3">
+  Camera position as a `Vector3`.
+</ResponseField>
+
+```lua
+local camPos = client.getCameraPos()
+print(camPos)
+```
+
+---
+
+## getCameraRot
+
+Returns the current camera rotation as Euler angles in degrees (pitch, yaw, roll).
+
+<ResponseField name="return" type="Vector3">
+  Camera rotation in degrees as a `Vector3` (X=pitch, Y=yaw, Z=roll).
+</ResponseField>
+
+```lua
+local rot = client.getCameraRot()
+print("Yaw: " .. rot.y)
+```
+
+---
+
+## getCameraDir
+
+Returns the normalized direction vector the camera is facing.
+
+<ResponseField name="return" type="Vector3">
+  Camera look direction as a unit `Vector3`.
+</ResponseField>
+
+```lua
+local dir = client.getCameraDir()
+print(dir)
+```
+
+---
+
+## getTextWidth
+
+Returns the rendered pixel width of a text string using the Minecraft font. Supports JSON text components and Figura emojis.
+
+<ParamField path="body.text" type="string" required>
+  The text string to measure. Accepts plain text or JSON component strings.
+</ParamField>
+
+<ResponseField name="return" type="integer">
+  Width in pixels.
+</ResponseField>
+
+```lua
+local width = client.getTextWidth("Hello, world!")
+print("Width: " .. width .. "px")
+```
+
+---
+
+## getTextHeight
+
+Returns the rendered pixel height of a text string. Optionally accepts a line spacing multiplier.
+
+<ParamField path="body.text" type="string">
+  The text string to measure.
+</ParamField>
+
+<ParamField path="body.lineSpacing" type="integer">
+  Line spacing multiplier. Defaults to `1`.
+</ParamField>
+
+<ResponseField name="return" type="integer">
+  Height in pixels.
+</ResponseField>
+
+```lua
+local height = client.getTextHeight("Line one\nLine two", 1)
+print(height)
+```
+
+---
+
+## getTextDimensions
+
+Returns both the width and height of a text string as a `Vector2`. Supports wrapping within a max pixel width.
+
+<ParamField path="body.text" type="string" required>
+  The text string to measure.
+</ParamField>
+
+<ParamField path="body.maxWidth" type="integer">
+  Maximum pixel width before wrapping. Defaults to `0` (no wrap limit).
+</ParamField>
+
+<ParamField path="body.wrap" type="boolean">
+  Whether to wrap text at `maxWidth`. Defaults to `true`.
+</ParamField>
+
+<ParamField path="body.lineSpacing" type="integer">
+  Line spacing multiplier. Defaults to `1`.
+</ParamField>
+
+<ResponseField name="return" type="Vector2">
+  Text dimensions as a `Vector2` (width, height) in pixels.
+</ResponseField>
+
+```lua
+local dims = client.getTextDimensions("Hello!", 100, true, 1)
+print(dims.x, dims.y)
+```
+
+---
+
+## getActiveLang
+
+Returns the language code currently active in the Minecraft options.
+
+<ResponseField name="return" type="string">
+  Language code string, e.g. `"en_us"`.
+</ResponseField>
+
+```lua
+print(client.getActiveLang())
+```
+
+---
+
+## isModLoaded
+
+Returns whether a mod with the given mod ID is currently loaded. Supports `"optifine"` and `"optifabric"` as aliases for OptiFine detection.
+
+<ParamField path="body.modID" type="string">
+  The mod ID to check.
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  `true` if the mod is loaded.
+</ResponseField>
+
+```lua
+if client.isModLoaded("sodium") then
+  print("Sodium is installed")
+end
+```
+
+---
+
+## getModVersion
+
+Returns the version string of a loaded mod, or `nil` if the mod is not loaded.
+
+<ParamField path="body.id" type="string" required>
+  The mod ID to look up.
+</ParamField>
+
+<ResponseField name="return" type="string | nil">
+  Mod version string, or `nil` if not loaded.
+</ResponseField>
+
+```lua
+print(client.getModVersion("figura"))
+```
+
+---
+
+## getModName
+
+Returns the display name of a loaded mod, or `nil` if the mod is not loaded.
+
+<ParamField path="body.id" type="string" required>
+  The mod ID to look up.
+</ParamField>
+
+<ResponseField name="return" type="string | nil">
+  Mod display name, or `nil` if not loaded.
+</ResponseField>
+
+```lua
+print(client.getModName("figura"))
+```
+
+---
+
+## hasShaderPackMod
+
+Returns whether a shader pack mod (Iris or OptiFine) is installed.
+
+<ResponseField name="return" type="boolean">
+  `true` if Iris or OptiFine is loaded.
+</ResponseField>
+
+```lua
+print(client.hasShaderPackMod())
+```
+
+---
+
+## hasShaderPack
+
+Returns whether a shader pack is currently active (loaded and in use).
+
+<ResponseField name="return" type="boolean">
+  `true` if a shader pack is active.
+</ResponseField>
+
+```lua
+if client.hasShaderPack() then
+  print("Shaders are active")
+end
+```
+
+---
+
+## getShaderPackName
+
+Returns the name of the currently active shader pack, or an empty string if none is active.
+
+<ResponseField name="return" type="string">
+  Shader pack name, or `""` if no pack is active.
+</ResponseField>
+
+```lua
+print(client.getShaderPackName())
+```
+
+---
+
+## hasResource
+
+Returns whether a resource exists in the currently active resource packs.
+
+<ParamField path="body.path" type="string" required>
+  Resource location string, e.g. `"minecraft:textures/block/dirt.png"`.
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  `true` if the resource exists.
+</ResponseField>
+
+```lua
+if client.hasResource("minecraft:textures/block/dirt.png") then
+  print("Dirt texture found")
+end
+```
+
+---
+
+## getActiveResourcePacks
+
+Returns a list of display names for all currently enabled resource packs.
+
+<ResponseField name="return" type="string[]">
+  Array of resource pack display name strings.
+</ResponseField>
+
+```lua
+for _, pack in ipairs(client.getActiveResourcePacks()) do
+  print(pack)
+end
+```
+
+---
+
+## getFiguraVersion
+
+Returns the version string of the installed Figura mod.
+
+<ResponseField name="return" type="string">
+  Figura version string.
+</ResponseField>
+
+```lua
+print(client.getFiguraVersion())
+```
+
+---
+
+## compareVersions
+
+Compares two semantic version strings. Returns a negative number if `version1 < version2`, zero if equal, or a positive number if `version1 > version2`.
+
+<ParamField path="body.version1" type="string" required>
+  First version string, e.g. `"1.2.0"`.
+</ParamField>
+
+<ParamField path="body.version2" type="string" required>
+  Second version string, e.g. `"1.3.0"`.
+</ParamField>
+
+<ResponseField name="return" type="integer">
+  Negative, zero, or positive comparison result.
+</ResponseField>
+
+```lua
+local cmp = client.compareVersions("1.0.0", "1.1.0")
+if cmp < 0 then
+  print("version1 is older")
+end
+```
+
+---
+
+## generateUUID
+
+Generates a new random UUID and returns it as an array of four integers.
+
+<ResponseField name="return" type="integer[]">
+  Array of four integers representing the UUID.
+</ResponseField>
+
+```lua
+local uuid = client.generateUUID()
+print(uuid[1], uuid[2], uuid[3], uuid[4])
+```
+
+---
+
+## intUUIDToString
+
+Converts a UUID represented as four integers into its standard string form.
+
+<ParamField path="body.a" type="integer" required>First UUID integer part.</ParamField>
+<ParamField path="body.b" type="integer" required>Second UUID integer part.</ParamField>
+<ParamField path="body.c" type="integer" required>Third UUID integer part.</ParamField>
+<ParamField path="body.d" type="integer" required>Fourth UUID integer part.</ParamField>
+
+<ResponseField name="return" type="string">
+  UUID string in `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` format.
+</ResponseField>
+
+```lua
+local str = client.intUUIDToString(uuid[1], uuid[2], uuid[3], uuid[4])
+print(str)
+```
+
+---
+
+## uuidToIntArray
+
+Converts a UUID string into an array of four integers.
+
+<ParamField path="body.uuid" type="string" required>
+  UUID string in standard format.
+</ParamField>
+
+<ResponseField name="return" type="integer[]">
+  Array of four integers.
+</ResponseField>
+
+```lua
+local parts = client.uuidToIntArray("550e8400-e29b-41d4-a716-446655440000")
+print(parts[1])
+```
+
+---
+
+## getViewer
+
+Returns a `ViewerAPI` wrapper for the local player entity.
+
+<ResponseField name="return" type="ViewerAPI">
+  The local player as a `ViewerAPI` object.
+</ResponseField>
+
+```lua
+local viewer = client.getViewer()
+print(viewer:getName())
+```
+
+---
+
+## getCameraEntity
+
+Returns an `EntityAPI` wrapper for the entity the camera is currently attached to.
+
+<ResponseField name="return" type="EntityAPI | nil">
+  The camera entity, or `nil` if no entity is set.
+</ResponseField>
+
+```lua
+local cam = client.getCameraEntity()
+if cam then print(cam:getName()) end
+```
+
+---
+
+## isIntegratedServer
+
+Returns whether the player is currently in a singleplayer world (running on the integrated server).
+
+<ResponseField name="return" type="boolean">
+  `true` if running on the integrated server.
+</ResponseField>
+
+```lua
+if client.isIntegratedServer() then
+  print("Singleplayer world")
+end
+```
+
+---
+
+## getServerData
+
+Returns a table containing information about the current server or singleplayer world. Keys present vary by context.
+
+<ResponseField name="return" type="table">
+  Table with string keys: `name`, `ip`, `motd`. Keys may be absent if the value is unavailable.
+</ResponseField>
+
+```lua
+local data = client.getServerData()
+print(data.name, data.ip)
+```
+
+---
+
+## getDate
+
+Returns a table with the current local date and time broken down into named fields.
+
+<ResponseField name="return" type="table">
+  Table with keys: `day`, `month`, `year`, `hour`, `minute`, `second`, `millisecond`, `week`, `year_day`, `week_day`, `daylight_saving`, `timezone`, `timezone_name`, `era`, `month_name`, `day_name`.
+</ResponseField>
+
+```lua
+local d = client.getDate()
+print(d.year .. "-" .. d.month .. "-" .. d.day)
+```
+
+---
+
+## getFrameTime
+
+Returns the partial tick value (frame delta) for the current frame, equivalent to the `delta` argument passed to render events.
+
+<ResponseField name="return" type="number">
+  Partial tick (0–1).
+</ResponseField>
+
+```lua
+local delta = client.getFrameTime()
+```
+
+---
+
+## getActionbar
+
+Returns the current action bar `Component`, or `nil` if no action bar message is active.
+
+<ResponseField name="return" type="Component | nil">
+  Active action bar component, or `nil`.
+</ResponseField>
+
+```lua
+local bar = client.getActionbar()
+if bar then print(bar) end
+```
+
+---
+
+## getTitle / getSubtitle
+
+Returns the current title or subtitle `Component` shown on screen, or `nil` if none is displayed.
+
+<ResponseField name="return" type="Component | nil">
+  Active title or subtitle component, or `nil`.
+</ResponseField>
+
+```lua
+local title = client.getTitle()
+if title then print(title) end
+```
+
+---
+
+## getScoreboard
+
+Returns the current scoreboard state as a nested table. Top-level keys represent display slots (`"sidebar"`, `"list"`, `"below_name"`, team-colored sidebar slots). Each value contains objective metadata and a `"scores"` sub-table mapping player names to integer scores.
+
+<ResponseField name="return" type="table">
+  Nested table of scoreboard data.
+</ResponseField>
+
+```lua
+local sb = client.getScoreboard()
+for slot, obj in pairs(sb) do
+  print(slot, obj.name)
+end
+```
+
+---
+
+## getBossbars
+
+Returns a table of all currently visible boss bars, keyed by UUID string. Each value contains `name`, `progress`, `color`, `style`, `darkenScreen`, `bossMusic`, and `fog` fields.
+
+<ResponseField name="return" type="table&lt;string, table&gt;">
+  Map of UUID string to boss bar data table.
+</ResponseField>
+
+```lua
+local bars = client.getBossbars()
+for uuid, bar in pairs(bars) do
+  print(bar.name, bar.progress)
+end
+```
+
+---
+
+## listAtlases
+
+Returns a list of all registered texture atlas resource locations.
+
+<ResponseField name="return" type="string[]">
+  Array of atlas resource location strings.
+</ResponseField>
+
+```lua
+for _, atlas in ipairs(client.listAtlases()) do
+  print(atlas)
+end
+```
+
+---
+
+## getAtlas
+
+Returns a `TextureAtlasAPI` wrapper for the named texture atlas.
+
+<ParamField path="body.path" type="string" required>
+  Resource location string of the atlas.
+</ParamField>
+
+<ResponseField name="return" type="TextureAtlasAPI | nil">
+  Atlas API object, or `nil` if the atlas does not exist.
+</ResponseField>
+
+```lua
+local atlas = client.getAtlas("minecraft:textures/atlas/blocks.png")
+```
+
+---
+
+## getTabList
+
+Returns the current tab-list (player list) contents as a table with `header`, `headerJson`, `players`, `footer`, and `footerJson` keys.
+
+<ResponseField name="return" type="table">
+  Tab-list data table.
+</ResponseField>
+
+```lua
+local list = client.getTabList()
+for _, name in ipairs(list.players) do
+  print(name)
+end
+```
+
+---
+
+## getTranslatedString
+
+Translates a translation key using the active language. Optionally accepts format arguments.
+
+<ParamField path="body.text" type="string" required>
+  The translation key, e.g. `"item.minecraft.diamond"`.
+</ParamField>
+
+<ParamField path="body.args" type="string | table">
+  Optional argument or table of arguments for format substitution.
+</ParamField>
+
+<ResponseField name="return" type="string">
+  Translated plain string.
+</ResponseField>
+
+```lua
+print(client.getTranslatedString("item.minecraft.diamond"))
+```
+
+---
+
+## getRegistry
+
+Returns a list of all registered entry names in a given Minecraft registry.
+
+<ParamField path="body.registryName" type="string" required>
+  Registry name, e.g. `"minecraft:item"`.
+</ParamField>
+
+<ResponseField name="return" type="string[]">
+  Array of resource location strings for all entries.
+</ResponseField>
+
+```lua
+local items = client.getRegistry("minecraft:item")
+print(#items .. " items registered")
+```
+
+---
+
+## getEnum
+
+Returns a list of valid string values for a Figura enum type.
+
+<ParamField path="body.enumName" type="string" required>
+  Enum name as recognized by Figura's list docs system.
+</ParamField>
+
+<ResponseField name="return" type="string[]">
+  Array of valid enum value strings.
+</ResponseField>
+
+```lua
+local renderTypes = client.getEnum("RenderType")
+for _, v in ipairs(renderTypes) do print(v) end
+```
+
+---
+
+## fsbConnected
+
+Returns whether Figura's backend server (FSB) is currently connected.
+
+<ResponseField name="return" type="boolean">
+  `true` if connected to the FSB.
+</ResponseField>
+
+```lua
+print(client.fsbConnected())
+```
+
+---
+
+## pingRateLimit
+
+Returns the current ping rate limit imposed by the FSB network connection.
+
+<ResponseField name="return" type="integer">
+  Pings per second rate limit.
+</ResponseField>
+
+```lua
+print(client.pingRateLimit())
+```
+
+---
+
+## pingSizeLimit
+
+Returns the maximum byte size allowed for a single ping packet.
+
+<ResponseField name="return" type="integer">
+  Ping size limit in bytes.
+</ResponseField>
+
+```lua
+print(client.pingSizeLimit())
+```
+
+---
+
+## getFiguraConfig
+
+Returns the value of a Figura configuration entry by key, or the entire config registry if no key is provided.
+
+<ParamField path="body.key" type="string">
+  Config key string (case-insensitive). Pass `nil` to get the full registry.
+</ParamField>
+
+<ResponseField name="return" type="any">
+  Config value, or the full config registry table if key is `nil`.
+</ResponseField>
+
+```lua
+print(client.getFiguraConfig("action_wheel_button"))
+```
+
+---
+
+## getVolume
+
+Returns the current volume level for a sound source category. Pass no argument or `nil` for the master volume.
+
+<ParamField path="body.source" type="string">
+  Sound source category name (e.g. `"MUSIC"`, `"BLOCK"`, `"MASTER"`). Case-insensitive. Defaults to `"MASTER"`.
+</ParamField>
+
+<ResponseField name="return" type="number">
+  Volume level between `0.0` and `1.0`.
+</ResponseField>
+
+```lua
+print("Master volume: " .. client.getVolume())
+print("Music volume: " .. client.getVolume("MUSIC"))
+```
+
+---
+
+## getMouseSensitivity
+
+Returns the computed mouse sensitivity value derived from the in-game slider setting.
+
+<ResponseField name="return" type="number">
+  Computed sensitivity multiplier.
+</ResponseField>
+
+```lua
+print(client.getMouseSensitivity())
+```
+
+---
+
+## getMouseInverted
+
+Returns whether the Y-axis mouse input is inverted.
+
+<ResponseField name="return" type="boolean">
+  `true` if Y mouse inversion is enabled.
+</ResponseField>
+
+```lua
+print(client.getMouseInverted())
+```
+
+---
+
+## getScrollSensitivity
+
+Returns the mouse wheel scroll sensitivity multiplier.
+
+<ResponseField name="return" type="number">
+  Scroll sensitivity value.
+</ResponseField>
+
+```lua
+print(client.getScrollSensitivity())
+```
+
+---
+
+## getDiscreteScrolling
+
+Returns whether discrete (stepped) mouse scrolling is enabled.
+
+<ResponseField name="return" type="boolean">
+  `true` if discrete scrolling is on.
+</ResponseField>
+
+```lua
+print(client.getDiscreteScrolling())
+```
+
+---
+
+## getChatWidth
+
+Returns the configured chat box width in pixels.
+
+<ResponseField name="return" type="number">
+  Chat width in pixels (40–320).
+</ResponseField>
+
+```lua
+print(client.getChatWidth())
+```
+
+---
+
+## getFocusedChatHeight
+
+Returns the height of the chat box when it is focused, in pixels.
+
+<ResponseField name="return" type="number">
+  Focused chat height in pixels (20–180).
+</ResponseField>
+
+```lua
+print(client.getFocusedChatHeight())
+```
+
+---
+
+## getUnfocusedChatHeight
+
+Returns the height of the chat box when it is not focused, in pixels.
+
+<ResponseField name="return" type="number">
+  Unfocused chat height in pixels (20–180).
+</ResponseField>
+
+```lua
+print(client.getUnfocusedChatHeight())
+```
+
+---
+
+## getEmojis
+
+Returns a list of emoji names available in Figura. Pass a category name to filter by category, or `nil` to get all emojis.
+
+<ParamField path="body.category" type="string">
+  Emoji category name. Pass `nil` to return all emojis across all categories.
+</ParamField>
+
+<ResponseField name="return" type="string[]">
+  Array of emoji name strings.
+</ResponseField>
+
+```lua
+local all = client.getEmojis(nil)
+print(#all .. " emojis available")
+
+local faces = client.getEmojis("faces")
+for _, name in ipairs(faces) do print(name) end
+```

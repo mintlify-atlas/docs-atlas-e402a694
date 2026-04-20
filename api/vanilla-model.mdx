@@ -1,0 +1,156 @@
+---
+title: "VanillaModelAPI — show and hide vanilla player parts"
+description: "The vanilla_model global exposes Minecraft's built-in player model parts so you can show, hide, offset, or scale them independently from your avatar geometry."
+---
+
+The `vanilla_model` global gives you direct control over Minecraft's built-in player model. Every field is either an individual `VanillaModelPart` (one bone) or a `VanillaModelGroup` (a logical set of bones). Changes you make here are applied on top of whatever Minecraft's animations produce each frame, so you typically call these methods inside `ENTITY_INIT` or `TICK` to ensure they persist.
+
+## Groups
+
+Groups apply their transform to every part they contain. Setting `visible` on a group propagates to all members.
+
+| Group | Contains |
+|---|---|
+| `ALL` | Every part in the list below |
+| `PLAYER` | `INNER_LAYER` + `OUTER_LAYER` (the full player skin) |
+| `INNER_LAYER` | `HEAD`, `BODY`, `LEFT_ARM`, `RIGHT_ARM`, `LEFT_LEG`, `RIGHT_LEG` |
+| `OUTER_LAYER` | `HAT`, `JACKET`, `LEFT_SLEEVE`, `RIGHT_SLEEVE`, `LEFT_PANTS`, `RIGHT_PANTS` |
+| `CAPE` | `CAPE_MODEL`, `FAKE_CAPE` |
+| `ARMOR` | `HELMET`, `CHESTPLATE`, `LEGGINGS`, `BOOTS` |
+| `HELMET` | `HELMET_ITEM`, `HELMET_HEAD`, `HELMET_HAT` |
+| `CHESTPLATE` | `CHESTPLATE_BODY`, `CHESTPLATE_LEFT_ARM`, `CHESTPLATE_RIGHT_ARM` |
+| `LEGGINGS` | `LEGGINGS_BODY`, `LEGGINGS_LEFT_LEG`, `LEGGINGS_RIGHT_LEG` |
+| `BOOTS` | `BOOTS_LEFT_LEG`, `BOOTS_RIGHT_LEG` |
+| `ELYTRA` | `LEFT_ELYTRA`, `RIGHT_ELYTRA` |
+| `HELD_ITEMS` | `LEFT_ITEM`, `RIGHT_ITEM` |
+| `PARROTS` | `LEFT_PARROT`, `RIGHT_PARROT` |
+
+## Individual parts
+
+Each name below is a field directly on `vanilla_model`.
+
+**Body:**
+`HEAD`, `BODY`, `LEFT_ARM`, `RIGHT_ARM`, `LEFT_LEG`, `RIGHT_LEG`
+
+**Outer skin layer:**
+`HAT`, `JACKET`, `LEFT_SLEEVE`, `RIGHT_SLEEVE`, `LEFT_PANTS`, `RIGHT_PANTS`
+
+**Cape:**
+`CAPE_MODEL`, `FAKE_CAPE`
+
+**Armor (helmet):**
+`HELMET_ITEM`, `HELMET_HEAD`, `HELMET_HAT`
+
+**Armor (chestplate):**
+`CHESTPLATE_BODY`, `CHESTPLATE_LEFT_ARM`, `CHESTPLATE_RIGHT_ARM`
+
+**Armor (leggings):**
+`LEGGINGS_BODY`, `LEGGINGS_LEFT_LEG`, `LEGGINGS_RIGHT_LEG`
+
+**Armor (boots):**
+`BOOTS_LEFT_LEG`, `BOOTS_RIGHT_LEG`
+
+**Wings:**
+`LEFT_ELYTRA`, `RIGHT_ELYTRA`
+
+**Held items:**
+`LEFT_ITEM`, `RIGHT_ITEM`
+
+**Parrots:**
+`LEFT_PARROT`, `RIGHT_PARROT`
+
+## Methods (VanillaPart / VanillaModelGroup)
+
+All individual parts and groups share the following methods. Methods on a group forward the call to every member.
+
+### Visibility
+
+**`setVisible(visible)`** — show (`true`) or hide (`false`) this part. Pass `nil` to reset to the default. Alias: `visible(visible)`.
+
+**`getVisible()`** — returns the current visibility override (`true`, `false`, or `nil` if not set).
+
+### Position
+
+**`setPos(x, y, z)`** / **`setPos(vec3)`** — offset this vanilla part's position relative to its default location. Alias: `pos(...)`.
+
+**`getPos()`** — returns the current position offset, or `nil` if not set.
+
+### Rotation
+
+**`setRot(x, y, z)`** / **`setRot(vec3)`** — override the rotation of this part in degrees. Replaces the vanilla animation rotation. Alias: `rot(...)`.
+
+**`getRot()`** — returns the rotation override, or `nil`.
+
+**`setOffsetRot(x, y, z)`** / **`setOffsetRot(vec3)`** — add a delta rotation on top of the vanilla animation rotation rather than replacing it. Alias: `offsetRot(...)`.
+
+**`getOffsetRot()`** — returns the offset rotation, or `nil`.
+
+### Scale
+
+**`setScale(x, y, z)`** / **`setScale(vec3)`** — override the scale of this part. Passing a single number scales uniformly. Alias: `scale(...)`.
+
+**`getScale()`** — returns the scale override, or `nil`.
+
+**`setOffsetScale(x, y, z)`** / **`setOffsetScale(vec3)`** — multiply an additional scale on top of the vanilla scale. Alias: `offsetScale(...)`.
+
+**`getOffsetScale()`** — returns the offset scale, or `nil`.
+
+### VanillaModelPart-only methods
+
+These methods are only available on individual `VanillaModelPart` instances, not on groups.
+
+**`getOriginVisible()`** — returns the visibility state that Minecraft set on this part before any avatar overrides were applied.
+
+**`getOriginRot()`** — returns the rotation Minecraft set on this part this frame (before overrides), as a `Vector3` in degrees.
+
+**`getOriginPos()`** — returns the position Minecraft set on this part this frame (before overrides).
+
+**`getOriginScale()`** — returns the scale Minecraft set on this part this frame (before overrides).
+
+## Examples
+
+```lua
+-- Hide the entire player model (useful when replacing with a full custom model)
+function events.ENTITY_INIT()
+    vanilla_model.ALL:setVisible(false)
+end
+```
+
+```lua
+-- Hide only the skin layer (inner + outer), keep armor visible
+function events.ENTITY_INIT()
+    vanilla_model.PLAYER:setVisible(false)
+end
+```
+
+```lua
+-- Hide only armor, keep the player skin
+function events.ENTITY_INIT()
+    vanilla_model.ARMOR:setVisible(false)
+end
+```
+
+```lua
+-- Hide just the vanilla head (let your custom head show through)
+function events.ENTITY_INIT()
+    vanilla_model.HEAD:setVisible(false)
+end
+```
+
+```lua
+-- Offset the vanilla head upward and add a rotation offset each tick
+function events.TICK()
+    vanilla_model.HEAD:setOffsetRot(0, world.getTime() % 360, 0)
+end
+```
+
+```lua
+-- Read vanilla animation data before applying your own
+function events.RENDER(delta)
+    local vanillaRot = vanilla_model.HEAD:getOriginRot()
+    -- vanillaRot.x, .y, .z are the values Minecraft used this frame
+    models.MyModel.Head:setOffsetRot(vanillaRot)
+end
+```
+
+> **Note:** Changes to `vanilla_model` must be reapplied every frame. The safest approach is to set visibility in `ENTITY_INIT` (runs once on spawn) and re-apply any per-frame transforms in the `RENDER` or `TICK` event.

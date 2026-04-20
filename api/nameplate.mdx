@@ -1,0 +1,320 @@
+---
+title: "NameplateAPI — customise player nametag display"
+description: "The nameplate global lets you change the text, color, visibility, and rendering of the player's nametag in the world, tab list, and chat independently."
+---
+
+The `nameplate` global lets you customise the text and appearance of the player's name wherever it appears in the game. It exposes four targets — `ENTITY`, `LIST`, `CHAT`, and `ALL` — each of which is an independent customisation object. Changes take effect immediately and are visible to all clients watching the avatar.
+
+<Note>
+  Modifying the nameplate requires the **NAMEPLATE_EDIT** permission (trust level 2 or higher). Viewers who have not granted that trust level will see the unmodified name.
+</Note>
+
+---
+
+## Targets
+
+| Target | Type | Description |
+|---|---|---|
+| `nameplate.ENTITY` | `EntityNameplateCustomization` | The nameplate above the player's head in the world. Supports all options including position, scale, and outline. |
+| `nameplate.LIST` | `NameplateCustomization` | The name shown in the tab player list. Supports text only. |
+| `nameplate.CHAT` | `NameplateCustomization` | The name shown in chat messages. Supports text only. |
+| `nameplate.ALL` | `NameplateCustomizationGroup` | Convenience group that applies `setText` to all three targets at once. |
+
+Access is case-insensitive: `nameplate.entity`, `nameplate.ENTITY`, and `nameplate.Entity` all refer to the same object.
+
+---
+
+## NameplateCustomization methods
+
+`LIST` and `CHAT` are `NameplateCustomization` objects that expose the following methods.
+
+### setText
+
+Sets the display name text. Accepts a plain string or a raw JSON text component string. The text is parsed, stripped of click events and badges, and emoji substitution is applied. Maximum rendered length is 64 characters.
+
+<ParamField path="text" type="string">
+  Plain or JSON text component string. Pass `nil` to reset to the default name.
+</ParamField>
+
+<ResponseField name="return" type="NameplateCustomization">
+  Returns itself for chaining.
+</ResponseField>
+
+```lua
+nameplate.LIST:setText("My Custom Name")
+nameplate.CHAT:setText('{"text":"ChatName","color":"gold"}')
+-- reset to default
+nameplate.LIST:setText(nil)
+```
+
+---
+
+### getText
+
+Returns the raw string that was last passed to `setText`, or `nil` if no custom text has been set.
+
+<ResponseField name="return" type="string | nil">
+  The raw text string.
+</ResponseField>
+
+```lua
+print(nameplate.LIST:getText())
+```
+
+---
+
+## EntityNameplateCustomization methods
+
+`nameplate.ENTITY` is an `EntityNameplateCustomization` that extends `NameplateCustomization` with the full set of visual controls listed below. It also has `setText` and `getText` from the base class.
+
+### setVisible / isVisible / visible
+
+Shows or hides the entity nameplate. When hidden the nametag is not rendered at all.
+
+<ParamField path="visible" type="boolean" required>
+  `true` to show, `false` to hide.
+</ParamField>
+
+<ResponseField name="return" type="EntityNameplateCustomization">
+  Returns itself for chaining.
+</ResponseField>
+
+```lua
+nameplate.ENTITY:setVisible(false)
+-- alias:
+nameplate.ENTITY:visible(false)
+print(nameplate.ENTITY:isVisible())
+```
+
+---
+
+### setBackgroundColor / getBackgroundColor / backgroundColor
+
+Sets the background rectangle color behind the nameplate text. Accepts RGBA components (0–1 range) or a `Vector4`. The default alpha matches the client's chat background opacity setting.
+
+<ParamField path="r" type="number">
+  Red component (0–1), or a `Vector4` containing all four components.
+</ParamField>
+
+<ParamField path="g" type="number">
+  Green component (0–1).
+</ParamField>
+
+<ParamField path="b" type="number">
+  Blue component (0–1).
+</ParamField>
+
+<ParamField path="a" type="number">
+  Alpha component (0–1).
+</ParamField>
+
+<ResponseField name="return" type="EntityNameplateCustomization">
+  Returns itself for chaining.
+</ResponseField>
+
+```lua
+nameplate.ENTITY:setBackgroundColor(0, 0, 0, 0.5)
+-- alias:
+nameplate.ENTITY:backgroundColor(0, 0, 0, 0.5)
+```
+
+---
+
+### setOutline / hasOutline / outline
+
+Enables or disables the text outline effect on the nameplate. The outline color is set separately with `setOutlineColor`.
+
+<ParamField path="outline" type="boolean" required>
+  `true` to enable the outline.
+</ParamField>
+
+```lua
+nameplate.ENTITY:setOutline(true)
+-- alias:
+nameplate.ENTITY:outline(true)
+print(nameplate.ENTITY:hasOutline())
+```
+
+---
+
+### setOutlineColor / outlineColor
+
+Sets the color of the text outline. Accepts RGB components (0–1 range) or a `Vector3`.
+
+<ParamField path="r" type="number">
+  Red component (0–1), or a `Vector3`.
+</ParamField>
+
+<ParamField path="g" type="number">
+  Green component.
+</ParamField>
+
+<ParamField path="b" type="number">
+  Blue component.
+</ParamField>
+
+<ResponseField name="return" type="EntityNameplateCustomization">
+  Returns itself for chaining.
+</ResponseField>
+
+```lua
+nameplate.ENTITY:setOutlineColor(1, 0, 0)  -- red outline
+-- alias:
+nameplate.ENTITY:outlineColor(1, 0, 0)
+```
+
+---
+
+### setShadow / hasShadow / shadow
+
+Enables or disables the drop shadow beneath the nameplate text.
+
+<ParamField path="shadow" type="boolean" required>
+  `true` to enable the shadow.
+</ParamField>
+
+```lua
+nameplate.ENTITY:setShadow(true)
+-- alias:
+nameplate.ENTITY:shadow(true)
+print(nameplate.ENTITY:hasShadow())
+```
+
+---
+
+### setScale / getScale / scale
+
+Sets the scale of the nameplate. Accepts XYZ components or a `Vector3`. A uniform scale can be set by passing a single value as the `x` argument (the other components default to `1`).
+
+<ParamField path="x" type="number | Vector3">
+  X scale, or a `Vector3` with all three components. `nil` resets to default.
+</ParamField>
+
+<ParamField path="y" type="number">
+  Y scale (default `1`).
+</ParamField>
+
+<ParamField path="z" type="number">
+  Z scale (default `1`).
+</ParamField>
+
+```lua
+nameplate.ENTITY:setScale(2, 2, 2)  -- double size
+-- alias:
+nameplate.ENTITY:scale(1.5, 1.5, 1.5)
+print(nameplate.ENTITY:getScale())
+```
+
+---
+
+### setPos / getPos / pos
+
+Offsets the nameplate from its default position. The offset is in block units relative to the entity's head.
+
+<ParamField path="x" type="number | Vector3">
+  X offset in blocks, or a `Vector3`. `nil` resets to default.
+</ParamField>
+
+<ParamField path="y" type="number">
+  Y offset.
+</ParamField>
+
+<ParamField path="z" type="number">
+  Z offset.
+</ParamField>
+
+```lua
+nameplate.ENTITY:setPos(0, 0.5, 0)  -- raise by half a block
+-- alias:
+nameplate.ENTITY:pos(0, 0.5, 0)
+print(nameplate.ENTITY:getPos())
+```
+
+---
+
+### setPivot / getPivot / pivot
+
+Sets the pivot point around which scale and position transforms are applied, in block units.
+
+```lua
+nameplate.ENTITY:setPivot(0, 1, 0)
+-- alias:
+nameplate.ENTITY:pivot(0, 1, 0)
+print(nameplate.ENTITY:getPivot())
+```
+
+---
+
+### setLight / getLight / light
+
+Overrides the light level used when rendering the nameplate. Accepts block and sky light values (0–15), or a `Vector2`. Pass `nil` to use the ambient light at the entity's position.
+
+<ParamField path="blockLight" type="integer | Vector2">
+  Block light level (0–15), or a `Vector2` with `(blockLight, skyLight)`. `nil` resets.
+</ParamField>
+
+<ParamField path="skyLight" type="integer">
+  Sky light level (0–15).
+</ParamField>
+
+```lua
+nameplate.ENTITY:setLight(15, 15)  -- full brightness
+-- alias:
+nameplate.ENTITY:light(15, 15)
+print(nameplate.ENTITY:getLight())
+```
+
+---
+
+## NameplateCustomizationGroup (ALL)
+
+`nameplate.ALL` is a group that forwards `setText` to `ENTITY`, `LIST`, and `CHAT` simultaneously. It only exposes one method.
+
+### setText
+
+Sets the text on all three nameplate targets at once.
+
+<ParamField path="text" type="string">
+  Plain or JSON text component string.
+</ParamField>
+
+<ResponseField name="return" type="NameplateCustomizationGroup">
+  Returns itself for chaining.
+</ResponseField>
+
+```lua
+nameplate.ALL:setText("MySuperName")
+```
+
+---
+
+## Complete example
+
+```lua
+-- Shift the entity nameplate up and add an outline
+nameplate.ENTITY
+    :setPos(0, 0.25, 0)
+    :setOutline(true)
+    :setOutlineColor(0.4, 0.8, 1)
+
+-- Rainbow nameplate that cycles every 3 seconds (60 ticks)
+events.TICK:register(function()
+    local t = world.getTime() % 60
+    local r = math.abs(math.sin(math.pi * t / 30))
+    local g = math.abs(math.sin(math.pi * (t / 30 + 0.33)))
+    local b = math.abs(math.sin(math.pi * (t / 30 + 0.67)))
+
+    local hex = string.format("#%02x%02x%02x",
+        math.floor(r * 255),
+        math.floor(g * 255),
+        math.floor(b * 255)
+    )
+    nameplate.ENTITY:setText(
+        '{"text":"' .. avatar.getName() .. '","color":"' .. hex .. '"}'
+    )
+end)
+
+-- Custom chat and tab-list name
+nameplate.CHAT:setText("[Avatar] " .. avatar.getName())
+nameplate.LIST:setText(avatar.getName() .. " ✦")
+```

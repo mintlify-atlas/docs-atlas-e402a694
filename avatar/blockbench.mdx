@@ -1,0 +1,132 @@
+---
+title: "Modelling Figura avatars in Blockbench"
+description: "Model, rig, and export Figura avatars using Blockbench and the official Figura plugin — covering groups, pivot points, and parent type conventions."
+---
+
+Blockbench is the free, open-source 3D modelling tool that Figura uses for all avatar geometry. You design your model in Blockbench, export it as a `.bbmodel` file, and drop it straight into your avatar folder — no conversion step required. Figura reads the `.bbmodel` directly at load time.
+
+## Installing the Figura Blockbench plugin
+
+Figura has a dedicated Blockbench plugin created by **KitCat962** that adds a special model format designed for Figura avatars. Install it from inside Blockbench:
+
+<Steps>
+  <Step title="Open the plugin browser">
+    In Blockbench, go to **File → Plugins → Available** (or click the puzzle-piece icon in the toolbar).
+  </Step>
+  <Step title="Search for Figura">
+    Type `Figura` in the search box. The plugin by KitCat962 will appear.
+  </Step>
+  <Step title="Install and restart">
+    Click **Install**, then restart Blockbench when prompted.
+  </Step>
+  <Step title="Create a Figura model">
+    Use **File → New → Figura Avatar** to start a new project with the correct format settings pre-applied.
+  </Step>
+</Steps>
+
+<Note>
+  Always install the plugin from the Blockbench plugin browser rather than from a downloaded file. The browser version is kept up to date automatically.
+</Note>
+
+## Model structure
+
+A Figura model is a hierarchy of **groups** (folders) and **elements** (cubes or meshes). At runtime each group becomes a `FiguraModelPart` that you can manipulate from Lua.
+
+```
+Root group (matches your .bbmodel filename)
+└── HEAD            ← parent type resolved automatically
+    └── Hat_Cube    ← a cube element
+└── BODY
+    └── Shirt_Mesh  ← a mesh element
+└── LEFT_ARM
+└── RIGHT_ARM
+```
+
+### Cubes vs meshes
+
+| Element type | Best for |
+|---|---|
+| **Cube** | Blocky, Minecraft-style geometry. UV mapping is straightforward. |
+| **Mesh** | Arbitrary polygons. Allows angled faces and organic shapes. |
+
+## Pivot points and rotations
+
+Every group has a **pivot point** — the origin around which it rotates. Getting pivot points right is critical for natural-looking movement:
+
+- The pivot point of `HEAD` should sit at the base of the neck (where the head meets the body).
+- The pivot points of `LEFT_ARM` and `RIGHT_ARM` should sit at the shoulder joint.
+- The pivot points of `LEFT_LEG` and `RIGHT_LEG` should sit at the hip joint.
+
+<Tip>
+  In Blockbench, select a group, switch to the **Rotate** tool, then drag the pivot point gizmo to the correct position. Getting this wrong is the most common cause of limbs bending around the wrong center.
+</Tip>
+
+## Group naming and parent types
+
+Figura resolves a group's **ParentType** by checking whether the group name *starts with* one of the recognized keywords. The match is prefix-based, so you can append anything after the keyword:
+
+<AccordionGroup>
+  <Accordion title="Core body parts">
+    | Group name starts with | Body part it follows |
+    |---|---|
+    | `HEAD` | Head (pitch + yaw) |
+    | `BODY` | Body (yaw only) |
+    | `LEFT_ARM` | Left arm swing |
+    | `RIGHT_ARM` | Right arm swing |
+    | `LEFT_LEG` | Left leg swing |
+    | `RIGHT_LEG` | Right leg swing |
+
+    Example: both `HEAD` and `HEAD_Visor` are parented to the vanilla head.
+  </Accordion>
+  <Accordion title="Elytra and cape">
+    | Group name starts with | Purpose |
+    |---|---|
+    | `LEFT_ELYTRA` | Left elytra wing (renders with elytra animation) |
+    | `RIGHT_ELYTRA` | Right elytra wing |
+    | `LEFT_ELYTRA_PIVOT` | Attachment pivot only — cubes inside are not rendered |
+    | `RIGHT_ELYTRA_PIVOT` | Attachment pivot only |
+    | `CAPE` | Cape layer |
+  </Accordion>
+  <Accordion title="Item and armor pivots">
+    Pivot groups are attachment points only — they do not render their own cubes. Use them to position held items or armor layers:
+
+    `LEFT_ITEM_PIVOT`, `RIGHT_ITEM_PIVOT`, `HELMET_PIVOT`, `CHESTPLATE_PIVOT`, `LEFT_SHOULDER_PIVOT`, `RIGHT_SHOULDER_PIVOT`, `LEGGINGS_PIVOT`, `LEFT_BOOT_PIVOT`, `RIGHT_BOOT_PIVOT`
+  </Accordion>
+  <Accordion title="Special render contexts">
+    | Group name starts with | Where it renders |
+    |---|---|
+    | `WORLD` | World space — ignores player transforms |
+    | `HUD` | Screen overlay |
+    | `CAMERA` | Always faces the camera (billboard) |
+    | `SKULL` | Skull/head block and item rendering |
+    | `PORTRAIT` | Figura wardrobe portrait |
+  </Accordion>
+</AccordionGroup>
+
+## Exporting to your avatar folder
+
+Blockbench saves `.bbmodel` files in place. To add the model to your avatar:
+
+1. Create or open an avatar folder inside `.minecraft/figura/avatars/`.
+2. In Blockbench, use **File → Save** (or **Ctrl+S**) and save the `.bbmodel` directly into your avatar folder.
+3. Make sure `avatar.json` is present in the same folder.
+4. Reload the avatar in-game from the Figura wardrobe screen.
+
+<Warning>
+  Do not use **File → Export → Export Bedrock Model** or similar export options. Figura reads the native `.bbmodel` format; other export targets produce incompatible files.
+</Warning>
+
+## Matching vanilla player proportions
+
+The vanilla Steve/Alex model uses specific pixel dimensions. To match them:
+
+- **Block scale:** 1 Blockbench unit = 1/16 of a Minecraft block.
+- **Player height:** 32 units tall (2 blocks).
+- **Head:** 8×8×8 units, centered at (0, 24, 0) with pivot at (0, 24, 0).
+- **Body:** 8×12×4 units.
+- **Arms (Steve):** 4×12×4 units. Alex slim arms are 3 units wide.
+- **Legs:** 4×12×4 units each.
+
+<Tip>
+  Open the vanilla `player.json` entity model from an extracted Minecraft jar as a reference in Blockbench. This lets you overlay your geometry on top of the real player model dimensions.
+</Tip>

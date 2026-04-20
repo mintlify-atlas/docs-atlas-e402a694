@@ -1,0 +1,354 @@
+---
+title: "ModelPart API — manipulating avatar parts"
+description: "The models global is the root of your avatar's model tree. Each Blockbench group becomes a ModelPart you can reposition, recolor, and attach render callbacks to."
+---
+
+The `models` global is the root of your avatar's model tree. Every group you create in Blockbench is exposed as a `ModelPart` object, and groups can be nested arbitrarily deep. You navigate the tree using dot notation: `models.MyModel.Head` reaches the group named `Head` inside `MyModel`. All transform methods return the part itself so calls can be chained.
+
+## Accessing parts
+
+```lua
+-- Reach a nested group
+local head = models.MyModel.Head
+
+-- Equivalent index syntax
+local head = models["MyModel"]["Head"]
+```
+
+## Render callbacks
+
+Three callback fields are available directly on every `ModelPart`. Assign a function and Figura will call it at the matching point in the render pipeline.
+
+| Field | When it runs |
+|---|---|
+| `preRender` | Before any transform calculations for this part |
+| `midRender` | After transforms, before pushing to the buffer |
+| `postRender` | After all children have been rendered |
+
+```lua
+models.MyModel.Head.preRender = function()
+    -- runs every frame before Head is rendered
+end
+```
+
+You can also set these via methods:
+
+- **`setPreRender(function)`** — assign the pre-render callback
+- **`setMidRender(function)`** — assign the mid-render callback
+- **`setPostRender(function)`** — assign the post-render callback
+
+## Visibility
+
+**`setVisible(visible)`** — show or hide this part and all its children. Accepts a boolean.
+
+**`getVisible()`** — returns `true` if this part and every ancestor is visible, `false` otherwise.
+
+```lua
+models.MyModel.Head:setVisible(false)
+
+if models.MyModel.Head:getVisible() then
+    -- part is fully visible
+end
+```
+
+## Position
+
+**`setPos(x, y, z)`** / **`setPos(vec3)`** — set the local offset position (in 1/16th-block units relative to the part's pivot). Alias: `pos(...)`.
+
+**`getPos()`** — returns the script-set position as a `Vector3`.
+
+**`getAnimPos()`** — returns the position contribution from animations.
+
+**`getTruePos()`** — returns `getPos() + getAnimPos()`, the actual position used during rendering.
+
+```lua
+models.MyModel.Head:setPos(0, 4, 0)   -- shift head up by 4 units
+local p = models.MyModel.Head:getPos()
+```
+
+## Rotation
+
+**`setRot(x, y, z)`** / **`setRot(vec3)`** — set the local Euler rotation in degrees. Alias: `rot(...)`.
+
+**`getRot()`** — returns the script-set rotation.
+
+**`setOffsetRot(x, y, z)`** / **`setOffsetRot(vec3)`** — add an offset rotation on top of the vanilla animation rotation. Alias: `offsetRot(...)`.
+
+**`getOffsetRot()`** — returns the offset rotation.
+
+**`getAnimRot()`** — returns the animation rotation contribution.
+
+**`getTrueRot()`** — returns `getRot() + getOffsetRot() + getAnimRot()`.
+
+```lua
+models.MyModel.Head:setRot(0, 45, 0)  -- rotate head 45° around Y
+```
+
+## Scale
+
+**`setScale(x, y, z)`** / **`setScale(vec3)`** — set the local scale. Passing a single number scales uniformly. Alias: `scale(...)`.
+
+**`getScale()`** — returns the script-set scale.
+
+**`setOffsetScale(x, y, z)`** / **`setOffsetScale(vec3)`** — multiply an additional scale factor on top of the vanilla scale. Alias: `offsetScale(...)`.
+
+**`getOffsetScale()`** — returns the offset scale.
+
+**`getAnimScale()`** — returns the animation scale contribution.
+
+**`getTrueScale()`** — returns `getScale() * getOffsetScale() * getAnimScale()`.
+
+```lua
+models.MyModel.Head:setScale(1.5, 1.5, 1.5)   -- big head
+```
+
+## Pivot
+
+**`setPivot(x, y, z)`** / **`setPivot(vec3)`** — override the pivot point of this part (in 1/16th-block units). Alias: `pivot(...)`.
+
+**`getPivot()`** — returns the script-set pivot.
+
+**`setOffsetPivot(x, y, z)`** / **`setOffsetPivot(vec3)`** — add an offset to the Blockbench pivot. Alias: `offsetPivot(...)`.
+
+**`getOffsetPivot()`** — returns the offset pivot.
+
+**`getTruePivot()`** — returns `getPivot() + getOffsetPivot()`.
+
+## Transformation matrices
+
+**`getPositionMatrix()`** — recalculates and returns the 4×4 position matrix for this part.
+
+**`getPositionMatrixRaw()`** — returns the cached 4×4 position matrix without recalculating.
+
+**`getNormalMatrix()`** — recalculates and returns the 3×3 normal matrix.
+
+**`getNormalMatrixRaw()`** — returns the cached 3×3 normal matrix.
+
+**`setMatrix(matrix)`** — force an explicit 4×4 transformation matrix, bypassing pos/rot/scale. Alias: `matrix(matrix)`.
+
+**`partToWorldMatrix()`** — returns the saved matrix that transforms from part-local space to world space. Updated each frame after the part is rendered.
+
+## Color and opacity
+
+**`setColor(r, g, b)`** / **`setColor(vec3)`** — set both the primary and secondary vertex color multiplier (0–1 range). Alias: `color(...)`.
+
+**`getColor()`** — returns the average of the primary and secondary color.
+
+**`setPrimaryColor(r, g, b)`** / **`setPrimaryColor(vec3)`** — set only the primary (main texture) color multiplier. Alias: `primaryColor(...)`.
+
+**`getPrimaryColor()`** — returns the primary color.
+
+**`setSecondaryColor(r, g, b)`** / **`setSecondaryColor(vec3)`** — set only the secondary (emissive texture) color multiplier. Alias: `secondaryColor(...)`.
+
+**`getSecondaryColor()`** — returns the secondary color.
+
+**`setOpacity(opacity)`** — set the overall alpha multiplier (0–1). Alias: `opacity(opacity)`.
+
+**`getOpacity()`** — returns the opacity value.
+
+```lua
+models.MyModel.Body:setColor(1, 0, 0)   -- tint the body red
+models.MyModel.Body:setOpacity(0.5)     -- make it semi-transparent
+```
+
+## Lighting and overlay
+
+**`setLight(blockLight, skyLight)`** / **`setLight(vec2)`** — override the light level for this part (0–15 each channel). Pass `nil` to clear the override. Alias: `light(...)`.
+
+**`getLight()`** — returns the overridden light as a `Vector2`, or `nil` if not set.
+
+**`setOverlay(whiteOverlay, hurtOverlay)`** / **`setOverlay(vec2)`** — override the overlay values. Alias: `overlay(...)`.
+
+**`getOverlay()`** — returns the overlay as a `Vector2`, or `nil`.
+
+## Render types
+
+**`setPrimaryRenderType(renderType)`** — set the render type for the main texture. Pass `nil` to reset. Alias: `primaryRenderType(renderType)`.
+
+**`getPrimaryRenderType()`** — returns the current primary render type name.
+
+**`setSecondaryRenderType(renderType)`** — set the render type for the secondary (emissive) texture. Alias: `secondaryRenderType(renderType)`.
+
+**`getSecondaryRenderType()`** — returns the current secondary render type name.
+
+Valid render type strings (from `RenderTypes` enum): `CUTOUT`, `CUTOUT_CULL`, `CUTOUT_EMISSIVE_SOLID`, `TRANSLUCENT`, `TRANSLUCENT_CULL`, `EMISSIVE`, `EMISSIVE_SOLID`, `EYES`, `END_PORTAL`, `END_GATEWAY`, `TEXTURED_PORTAL`, `GLINT`, `GLINT2`, `TEXTURED_GLINT`, `LINES`, `LINES_STRIP`, `SOLID`, `BLURRY`.
+
+## Textures
+
+**`setPrimaryTexture(type, value)`** — override the primary texture. `type` is a texture override type string; when `type` is `"custom"`, `value` is a `Texture` object. Alias: `primaryTexture(...)`.
+
+**`getPrimaryTexture()`** — returns the override type and value as two return values.
+
+**`setSecondaryTexture(type, value)`** — override the secondary texture. Alias: `secondaryTexture(...)`.
+
+**`getSecondaryTexture()`** — returns the secondary texture override type and value.
+
+**`getTextures()`** — returns a list of all `Texture` objects applied to this part.
+
+**`getTextureSize()`** — returns the texture width and height as a `Vector2`. Throws if the part has multiple differently-sized textures.
+
+**`getPrimaryDefinedTextures(index)`** — returns a table with keys `main`, `emissive`, `specular`, `normal` for the texture set at `index`.
+
+**`getSecondaryDefinedTextures(index)`** — same as above for the secondary texture set.
+
+## UV mapping
+
+**`setUV(u, v)`** / **`setUV(vec2)`** — translate the UV coordinates (0–1 normalized). Alias: `uv(...)`.
+
+**`getUV()`** — returns the current UV offset as a `Vector2`.
+
+**`setUVPixels(u, v)`** / **`setUVPixels(vec2)`** — translate UVs in pixel units. Alias: `uvPixels(...)`.
+
+**`getUVPixels()`** — returns the UV offset in pixels.
+
+**`setUVMatrix(matrix)`** — apply a 3×3 matrix to UV coordinates directly. Alias: `uvMatrix(matrix)`.
+
+**`getUVMatrix()`** — returns the current UV 3×3 matrix.
+
+## Shading
+
+**`shading(shade)`** — enable or disable diffuse shading on this part. Alias: `shade(shade)`.
+
+**`noShading(noShading)`** — convenience inverse of `shading`. Alias: `noShade(noShading)`.
+
+**`isShaded()`** — returns whether shading is enabled, or `nil` if inheriting from parent.
+
+## Part info
+
+**`getName()`** — returns the name of this part as a string.
+
+**`getType()`** — returns the part type: `"GROUP"`, `"CUBE"`, or `"MESH"`.
+
+**`getParent()`** — returns the parent `ModelPart`, or `nil` if this is the root.
+
+**`getChildren()`** — returns a table (1-indexed) of all direct child parts.
+
+**`getUUID()`** — returns the Blockbench UUID string for this part, or `nil`.
+
+**`isChildOf(part)`** — returns `true` if this part is a descendant of `part`.
+
+## Parent type
+
+**`setParentType(parentType)`** — change which vanilla bone this part follows. Alias: `parentType(parentType)`.
+
+**`getParentType()`** — returns the current parent type name.
+
+**`overrideVanillaRot()`** — returns `true` if this part overrides the vanilla rotation from animations.
+
+**`overrideVanillaPos()`** — returns `true` if this part overrides the vanilla position.
+
+**`overrideVanillaScale()`** — returns `true` if this part overrides the vanilla scale.
+
+### ParentType values
+
+The parent type determines which vanilla skeleton bone the part tracks. Set it by naming your Blockbench group with one of the recognized strings, or call `setParentType` at runtime.
+
+| Value | Description |
+|---|---|
+| `None` / `MODEL` | Default — rendered as a standalone model |
+| `Head` / `HEAD` | Tracks the player's head bone |
+| `Body` / `BODY` | Tracks the player's body bone |
+| `LeftArm` / `LEFT_ARM` | Tracks the left arm |
+| `RightArm` / `RIGHT_ARM` | Tracks the right arm |
+| `LeftLeg` / `LEFT_LEG` | Tracks the left leg |
+| `RightLeg` / `RIGHT_LEG` | Tracks the right leg |
+| `LeftElytra` / `LEFT_ELYTRA` | Tracks the left elytra wing |
+| `RightElytra` / `RIGHT_ELYTRA` | Tracks the right elytra wing |
+| `Cape` / `CAPE` | Tracks the cape bone |
+| `World` / `WORLD` | Rendered in world space (not attached to the player) |
+| `Hud` / `HUD` | Rendered on the HUD overlay |
+| `Camera` / `CAMERA` | Rendered as a camera-facing billboard |
+| `Skull` / `SKULL` | Rendered as a skull/head block |
+| `Portrait` / `PORTRAIT` | Rendered in portrait mode |
+| `Arrow` / `ARROW` | Tracks arrows |
+| `Trident` / `TRIDENT` | Tracks thrown tridents |
+| `Item` / `ITEM` | Tracks held items |
+| `LeftItemPivot` / `LEFT_ITEM_PIVOT` | Item pivot for the left hand |
+| `RightItemPivot` / `RIGHT_ITEM_PIVOT` | Item pivot for the right hand |
+| `HelmetPivot` / `HELMET_PIVOT` | Helmet attachment pivot |
+| `ChestplatePivot` / `CHESTPLATE_PIVOT` | Chestplate attachment pivot |
+| `LeftShoulderPivot` / `LEFT_SHOULDER_PIVOT` | Left shoulder armor pivot |
+| `RightShoulderPivot` / `RIGHT_SHOULDER_PIVOT` | Right shoulder armor pivot |
+| `LeggingsPivot` / `LEGGINGS_PIVOT` | Leggings attachment pivot |
+| `LeftBootPivot` / `LEFT_BOOT_PIVOT` | Left boot pivot |
+| `RightBootPivot` / `RIGHT_BOOT_PIVOT` | Right boot pivot |
+
+```lua
+-- Attach a group to the head bone at runtime
+models.MyModel.Hat:setParentType("Head")
+```
+
+## Render tasks
+
+**`newText(taskName)`** — create and attach a `TextTask` with the given name.
+
+**`newItem(taskName)`** — create and attach an `ItemTask`.
+
+**`newBlock(taskName)`** — create and attach a `BlockTask`.
+
+**`newSprite(taskName)`** — create and attach a `SpriteTask`.
+
+**`newEntity(taskName)`** — create and attach an `EntityTask`.
+
+**`addTask(renderTask)`** — add an existing `RenderTask` object to this part.
+
+**`getTask(taskName)`** — get a single task by name, or get a map of all tasks when called with no argument.
+
+**`removeTask()`** — remove a task by name, by `RenderTask` object, or clear all tasks when called with no argument.
+
+```lua
+local task = models.MyModel.Head:newItem("sword")
+task:setItem("minecraft:diamond_sword")
+task:setPos(0, 8, 0)
+
+-- Retrieve it later
+local same = models.MyModel.Head:getTask("sword")
+
+-- Remove it
+models.MyModel.Head:removeTask("sword")
+```
+
+## Hierarchy manipulation
+
+**`newPart(name)`** / **`newPart(name, parentType)`** — create a new empty child `ModelPart` attached to this part.
+
+**`addChild(part)`** — attach an existing part as a child of this one.
+
+**`removeChild(part)`** — detach a child part.
+
+**`moveTo(part)`** — reparent this part under `part`.
+
+**`remove()`** — detach this part from its current parent.
+
+**`copy(name)`** / **`copy(deepCopy)`** / **`copy(name, deepCopy)`** — create a shallow copy (children are shared) or deep copy of this part.
+
+**`deepCopy(name)`** — create a full recursive copy of this part and all its children.
+
+## Vertex access
+
+**`getVertices(textureID)`** — returns the list of `Vertex` objects for faces assigned to the texture named `textureID`.
+
+**`getAllVertices()`** — returns a table mapping texture name to vertex list for all textures on this part.
+
+## Collections
+
+**`getCollection(name)`** — returns a `PartCollection` by name, if collections are configured in the avatar.
+
+**`getCollections()`** — returns a map of all collections on this part.
+
+## Full example
+
+```lua
+-- On init, scale and tint the head, hide the body
+function events.ENTITY_INIT()
+    models.MyModel.Head:setScale(1.2, 1.2, 1.2)
+    models.MyModel.Head:setColor(0.8, 1, 0.8)
+    models.MyModel.Body:setVisible(false)
+end
+
+-- Each tick, bob the hat up and down
+function events.TICK()
+    local t = world.getTime()
+    models.MyModel.Hat:setPos(0, math.sin(t * 0.2) * 2, 0)
+end
+```

@@ -1,0 +1,507 @@
+---
+title: "WorldAPI — time, weather, biomes, and blocks"
+description: "WorldAPI gives Lua scripts access to world state: time, weather, biomes, block states, light levels, entities, and utility constructors for blocks and items."
+---
+
+The `world` global provides read access to the Minecraft client world from within Figura Lua scripts. You can query time, weather, block and biome data at any position, retrieve light levels, get lists of nearby entities and players, and construct block state or item stack objects by registry name. All methods are static — call them directly on the `world` global.
+
+<Note>
+  `world` methods that accept a position can take either a `Vector3` or three separate `x, y, z` number arguments. Methods that require a chunk to be loaded return `nil` when the chunk is absent.
+</Note>
+
+## World existence
+
+### `exists()`
+
+Returns `true` if a client world is currently loaded. All other `world` methods are safe to call only when this returns `true`.
+
+```lua
+if world.exists() then
+  print("In a world!")
+end
+```
+
+**Returns:** `boolean`
+
+---
+
+## Time
+
+### `getTime([delta])`
+
+Returns the total world game time in ticks since the world was created, optionally offset by `delta`.
+
+<ParamField path="delta" type="number">
+  Value added to the game time before returning. Defaults to `0`.
+</ParamField>
+
+```lua
+local t = world.getTime()
+print("Game ticks:", t)
+```
+
+**Returns:** `number`
+
+---
+
+### `getTimeOfDay([delta])`
+
+Returns the raw day-time counter (ticks since the last midnight, not clamped to 24000). This is equivalent to the `/time query daytime` command result.
+
+<ParamField path="delta" type="number">
+  Offset added before returning. Defaults to `0`.
+</ParamField>
+
+**Returns:** `number`
+
+---
+
+### `getDayTime([delta])`
+
+Returns the time of day within the current 24000-tick day cycle (`0` = midnight, `6000` = noon, `18000` = next midnight).
+
+<ParamField path="delta" type="number">
+  Offset added before computing the modulo. Defaults to `0`.
+</ParamField>
+
+```lua
+local dayTick = world.getDayTime()
+local isDay = dayTick > 0 and dayTick < 13000
+```
+
+**Returns:** `number` in `[0, 24000)`
+
+---
+
+### `getDay([delta])`
+
+Returns the number of complete in-game days elapsed since the world was created.
+
+<ParamField path="delta" type="number">
+  Offset applied before dividing by 24000. Defaults to `0`.
+</ParamField>
+
+```lua
+print("Day number:", math.floor(world.getDay()))
+```
+
+**Returns:** `number`
+
+---
+
+### `getMoonPhase()`
+
+Returns the current lunar phase as an integer from `0` (full moon) to `7` (waning crescent).
+
+```lua
+local phase = world.getMoonPhase()
+if phase == 0 then
+  print("Full moon tonight!")
+end
+```
+
+**Returns:** `integer`
+
+---
+
+## Weather
+
+### `getRainGradient([delta])`
+
+Returns the rain intensity as a number from `0.0` (no rain) to `1.0` (full rain). This value transitions smoothly when rain starts or stops.
+
+<ParamField path="delta" type="number">
+  Interpolation factor. Defaults to `1.0`.
+</ParamField>
+
+```lua
+local rain = world.getRainGradient()
+if rain > 0.5 then
+  print("It's raining hard.")
+end
+```
+
+**Returns:** `number`
+
+---
+
+### `isThundering()`
+
+Returns `true` if it is currently thundering (a thunderstorm is active).
+
+```lua
+if world.isThundering() then
+  print("Thunder!")
+end
+```
+
+**Returns:** `boolean`
+
+---
+
+## Blocks and biomes
+
+### `getBiome(pos)` / `getBiome(x, y, z)`
+
+Returns a `BiomeAPI` object for the biome at the given world position.
+
+<ParamField path="pos" type="Vector3">
+  World position. Can also be passed as three separate `x, y, z` numbers.
+</ParamField>
+
+```lua
+local biome = world.getBiome(player:getPos())
+print(biome:getName())
+```
+
+**Returns:** `BiomeAPI`
+
+---
+
+### `getBlockState(pos)` / `getBlockState(x, y, z)`
+
+Returns a `BlockStateAPI` object for the block at the given position. Returns `void_air` if the chunk is not loaded.
+
+<ParamField path="pos" type="Vector3">
+  Block position. Can also be passed as three separate `x, y, z` numbers.
+</ParamField>
+
+```lua
+local block = world.getBlockState(player:getPos())
+print(block:getID())
+```
+
+**Returns:** `BlockStateAPI`
+
+---
+
+### `getBlocks(min, max)` / `getBlocks(minX, minY, minZ, maxX, maxY, maxZ)`
+
+Returns a list of `BlockStateAPI` objects for all blocks within the given bounding box. The region is clamped to an 8×8×8 maximum volume per axis.
+
+<ParamField path="min" type="Vector3">
+  Minimum corner of the region.
+</ParamField>
+<ParamField path="max" type="Vector3">
+  Maximum corner of the region.
+</ParamField>
+
+```lua
+local pos = player:getPos()
+local blocks = world.getBlocks(
+  pos + vec(0, -1, 0),
+  pos + vec(2, 1, 2)
+)
+for _, b in ipairs(blocks) do
+  print(b:getID())
+end
+```
+
+**Returns:** `BlockStateAPI[]`
+
+---
+
+### `isChunkLoaded(pos)` / `isChunkLoaded(x, y, z)`
+
+Returns `true` if the chunk containing the given position is currently loaded.
+
+<ParamField path="pos" type="Vector3">
+  Any position within the chunk to test.
+</ParamField>
+
+```lua
+if world.isChunkLoaded(player:getPos()) then
+  local block = world.getBlockState(player:getPos())
+end
+```
+
+**Returns:** `boolean`
+
+---
+
+### `isOpenSky(pos)` / `isOpenSky(x, y, z)`
+
+Returns `true` if the sky is visible from the given position (no opaque block overhead). Returns `nil` if the chunk is not loaded.
+
+**Returns:** `boolean` or `nil`
+
+---
+
+## Light levels
+
+### `getLightLevel(pos)` / `getLightLevel(x, y, z)`
+
+Returns the combined light level (block + sky) at the given position, accounting for sky darkening. Returns `nil` if the chunk is not loaded.
+
+<ParamField path="pos" type="Vector3">
+  World position.
+</ParamField>
+
+```lua
+local light = world.getLightLevel(player:getPos())
+print("Light:", light)
+```
+
+**Returns:** `integer` (0–15) or `nil`
+
+---
+
+### `getSkyLightLevel(pos)` / `getSkyLightLevel(x, y, z)`
+
+Returns the raw sky light level at the given position. Returns `nil` if the chunk is not loaded.
+
+**Returns:** `integer` (0–15) or `nil`
+
+---
+
+### `getBlockLightLevel(pos)` / `getBlockLightLevel(x, y, z)`
+
+Returns the block (torch) light level at the given position. Returns `nil` if the chunk is not loaded.
+
+**Returns:** `integer` (0–15) or `nil`
+
+---
+
+## Redstone
+
+### `getRedstonePower(pos)` / `getRedstonePower(x, y, z)`
+
+Returns the strongest indirect redstone signal at the given block position.
+
+<ParamField path="pos" type="Vector3">
+  Block position.
+</ParamField>
+
+```lua
+local power = world.getRedstonePower(somePos)
+```
+
+**Returns:** `integer` (0–15)
+
+---
+
+### `getStrongRedstonePower(pos)` / `getStrongRedstonePower(x, y, z)`
+
+Returns the direct (strong) redstone signal at the given block position.
+
+**Returns:** `integer` (0–15)
+
+---
+
+## Height
+
+### `getHeight(pos, [heightmap])` / `getHeight(x, z, [heightmap])`
+
+Returns the Y coordinate of the highest block according to the given heightmap type.
+
+<ParamField path="pos" type="Vector2">
+  X and Z coordinates. Can also be passed as two separate numbers.
+</ParamField>
+<ParamField path="heightmap" type="string">
+  Heightmap type. One of `"MOTION_BLOCKING"` (default), `"MOTION_BLOCKING_NO_LEAVES"`, `"OCEAN_FLOOR"`, `"WORLD_SURFACE"`. Case-insensitive.
+</ParamField>
+
+```lua
+local x, z = player:getPos().x, player:getPos().z
+local surfaceY = world.getHeight(vec(x, z), "WORLD_SURFACE")
+```
+
+**Returns:** `integer` or `nil` if chunk not loaded
+
+---
+
+### `getBuildHeight()`
+
+Returns a two-element array `{minY, maxY}` giving the world's vertical build limits.
+
+```lua
+local limits = world.getBuildHeight()
+print("Min Y:", limits[1], "Max Y:", limits[2])
+```
+
+**Returns:** `integer[2]`
+
+---
+
+### `getSpawnPoint()`
+
+Returns the world spawn point as a `Vector3`.
+
+```lua
+local spawn = world.getSpawnPoint()
+```
+
+**Returns:** `Vector3`
+
+---
+
+## Dimension
+
+### `getDimension()`
+
+Returns the registry name of the current dimension, e.g. `"minecraft:overworld"`, `"minecraft:the_nether"`, or `"minecraft:the_end"`.
+
+```lua
+if world.getDimension() == "minecraft:the_nether" then
+  print("Player is in the Nether.")
+end
+```
+
+**Returns:** `string`
+
+---
+
+## Entities and players
+
+### `getPlayers()`
+
+Returns a table mapping player name strings to `PlayerAPI` objects for every player in the current client world.
+
+```lua
+for name, p in pairs(world.getPlayers()) do
+  print(name, p:getPos())
+end
+```
+
+**Returns:** `{[string]: PlayerAPI}`
+
+---
+
+### `getEntity(uuid)`
+
+Returns the `EntityAPI` object for the entity with the given UUID string, or `nil` if no such entity is loaded.
+
+<ParamField path="uuid" type="string" required>
+  UUID in hyphenated string format.
+</ParamField>
+
+```lua
+local e = world.getEntity("550e8400-e29b-41d4-a716-446655440000")
+```
+
+**Returns:** `EntityAPI` or `nil`
+
+---
+
+### `getEntities(pos1, pos2)` / `getEntities(x1, y1, z1, x2, y2, z2)`
+
+Returns a list of all entities within the given axis-aligned bounding box.
+
+<ParamField path="pos1" type="Vector3">
+  One corner of the AABB.
+</ParamField>
+<ParamField path="pos2" type="Vector3">
+  Opposite corner of the AABB.
+</ParamField>
+
+```lua
+local center = player:getPos()
+local nearby = world.getEntities(
+  center - vec(10, 10, 10),
+  center + vec(10, 10, 10)
+)
+for _, e in ipairs(nearby) do
+  print(e:getType())
+end
+```
+
+**Returns:** `EntityAPI[]`
+
+---
+
+## Map data
+
+### `getMapData(id)`
+
+Returns a table of data for the map item with the given string ID (e.g. `"map_0"`), or `nil` if the map data is not loaded.
+
+<ParamField path="id" type="string" required>
+  Map item identifier string.
+</ParamField>
+
+The returned table contains:
+
+| Key | Type | Description |
+|---|---|---|
+| `center_x` | integer | Map center X |
+| `center_z` | integer | Map center Z |
+| `locked` | boolean | Whether the map is locked |
+| `scale` | integer | Map zoom scale (0–4) |
+| `decorations` | table[] | List of map marker objects |
+
+**Returns:** `table` or `nil`
+
+---
+
+## Avatar variables
+
+### `avatarVars()`
+
+Returns a table mapping UUID strings to each loaded avatar's stored variable table. Useful for reading `avatar.store` data from multiple avatars.
+
+```lua
+for uuid, vars in pairs(world.avatarVars()) do
+  print(uuid, vars.mood)
+end
+```
+
+**Returns:** `{[string]: table}`
+
+---
+
+## Constructors
+
+### `newBlock(block[, pos])` / `newBlock(block, x, y, z)`
+
+Parses a block state string and returns a `BlockStateAPI` object. The position is used for context (e.g. facing direction) but defaults to the origin.
+
+<ParamField path="block" type="string" required>
+  Block state string as you would write in a command, e.g. `"minecraft:stone"` or `"minecraft:furnace[facing=north]"`.
+</ParamField>
+<ParamField path="pos" type="Vector3">
+  Optional world position context.
+</ParamField>
+
+```lua
+local stone = world.newBlock("minecraft:stone")
+local furnace = world.newBlock("minecraft:furnace[facing=north]")
+```
+
+**Returns:** `BlockStateAPI`
+
+---
+
+### `newItem(item[, count[, damage]])`
+
+Parses an item string and returns an `ItemStack` object.
+
+<ParamField path="item" type="string" required>
+  Item registry string, e.g. `"minecraft:diamond_sword"`.
+</ParamField>
+<ParamField path="count" type="integer">
+  Stack size. Defaults to `1`.
+</ParamField>
+<ParamField path="damage" type="integer">
+  Damage (durability consumed) value. Defaults to `0`.
+</ParamField>
+
+```lua
+local sword = world.newItem("minecraft:diamond_sword", 1, 100)
+print(sword:getDamage())
+```
+
+**Returns:** `ItemStack`
+
+---
+
+## Usage example
+
+```lua
+-- Each tick, print the biome and light level at the player's feet
+function events.tick()
+  local pos   = player:getPos()
+  local biome = world.getBiome(pos):getName()
+  local light = world.getLightLevel(pos)
+  log("Biome: " .. biome .. "  Light: " .. tostring(light))
+end
+```

@@ -1,0 +1,269 @@
+---
+title: "Math API — Figura vectors, matrices, and helpers"
+description: "Reference for the vectors and matrices globals: create and manipulate Vec2/Vec3/Vec4 and Mat2/Mat3/Mat4 values inside Figura avatar scripts."
+---
+
+Figura exposes two math globals — `vectors` and `matrices` — that let avatar scripts create and work with vector and matrix values. These types are used throughout the rest of the API wherever positions, directions, colors, or transforms are needed. Lua's standard `math` library is also available and behaves as normal.
+
+## The `vectors` global
+
+`vectors` is the factory for all vector types. Every method returns a new vector object.
+
+### Vector creation
+
+```lua
+-- Generic factory — infers type from argument count
+local v2 = vectors.vec(0.5, 1.0)          -- Vector2
+local v3 = vectors.vec(1, 2, 3)           -- Vector3
+local v4 = vectors.vec(1, 2, 3, 4)        -- Vector4
+
+-- Explicit factories
+local a = vectors.vec2(0.5, 0.5)
+local b = vectors.vec3(1, 2, 3)
+local c = vectors.vec4(1, 2, 3, 1)
+```
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `vectors.vec(x, y)` | `Vector2` | Create a 2-component vector |
+| `vectors.vec(x, y, z)` | `Vector3` | Create a 3-component vector |
+| `vectors.vec(x, y, z, w)` | `Vector4` | Create a 4-component vector |
+| `vectors.vec2(x, y)` | `Vector2` | Explicit Vec2 constructor |
+| `vectors.vec3(x, y, z)` | `Vector3` | Explicit Vec3 constructor |
+| `vectors.vec4(x, y, z, w)` | `Vector4` | Explicit Vec4 constructor |
+
+### Color conversion utilities
+
+All color methods accept either a vector argument or individual number components.
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `vectors.rgbToInt(r, g, b)` | `integer` | Pack an RGB Vec3 (0–1 range) into an integer |
+| `vectors.intToRGB(color)` | `Vector3` | Unpack an integer color to an RGB Vec3 |
+| `vectors.hexToRGB(hex)` | `Vector3` | Parse a hex color string (`"#FF8800"`) to RGB Vec3 |
+| `vectors.hsvToRGB(h, s, v)` | `Vector3` | Convert HSV to RGB |
+| `vectors.rgbToHSV(r, g, b)` | `Vector3` | Convert RGB to HSV |
+| `vectors.rgbToHex(r, g, b)` | `string` | Convert RGB Vec3 to hex string |
+
+```lua
+local orange = vectors.hexToRGB("#FF8800")  -- returns Vector3(1, 0.533, 0)
+local packed  = vectors.rgbToInt(1, 0.5, 0)
+local unpacked = vectors.intToRGB(packed)
+
+local hsv = vectors.rgbToHSV(1, 0, 0)      -- pure red → hue=0, sat=1, val=1
+local rgb = vectors.hsvToRGB(0.66, 1, 1)   -- blue
+```
+
+### Spatial math utilities
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `vectors.rotateAroundAxis(angle, vec, axis)` | `Vector3` | Rotate `vec` by `angle` degrees around `axis` |
+| `vectors.toCameraSpace(vec)` | `Vector3` | Transform a world-space vector into camera space |
+| `vectors.worldToScreenSpace(vec)` | `Vector4` | Project a world-space point to screen-space (returns Vec4 with w for depth) |
+| `vectors.angleToDir(pitch, yaw)` | `Vector3` | Convert pitch/yaw angles (in degrees) to a unit direction vector |
+
+```lua
+-- Get the direction the player is looking
+local dir = vectors.angleToDir(player:getRot())
+
+-- Project a world position onto the screen
+local screen = vectors.worldToScreenSpace(someEntity:getPos())
+```
+
+---
+
+## Vector methods
+
+All vector types (`Vector2`, `Vector3`, `Vector4`) share a common set of methods. Methods modify the vector **in place** and return `self` for chaining, unless otherwise noted.
+
+### Fields
+
+Vectors expose their components as readable and writable fields. Swizzling is supported (e.g. `v.xy`, `v.zyx`).
+
+| Field | Description |
+|-------|-------------|
+| `x` (or `r`, `1`) | First component |
+| `y` (or `g`, `2`) | Second component |
+| `z` (or `b`, `3`) | Third component (Vec3/Vec4 only) |
+| `w` (or `a`, `4`) | Fourth component (Vec4 only) |
+
+### Arithmetic
+
+| Method | Description |
+|--------|-------------|
+| `vec:set(x, y[, z[, w]])` | Set all components |
+| `vec:add(x, y[, z])` | Add components (or another vector) in place |
+| `vec:sub(x, y[, z])` | Subtract components in place |
+| `vec:mul(x, y[, z])` | Multiply components element-wise in place |
+| `vec:div(x, y[, z])` | Divide components element-wise in place |
+| `vec:scale(factor)` | Multiply all components by a scalar |
+| `vec:offset(n)` | Add `n` to every component |
+| `vec:reduce(x, y[, z])` | Modulo each component by the corresponding value |
+| `vec:reset()` | Set all components to `0` |
+
+Vectors also support arithmetic operators directly:
+
+```lua
+local a = vectors.vec3(1, 2, 3)
+local b = vectors.vec3(4, 5, 6)
+
+local sum  = a + b          -- Vector3(5, 7, 9)
+local diff = a - b
+local prod = a * 2          -- scale by scalar
+local quot = b / 2
+local neg  = -a
+
+-- In-place mutation
+a:add(1, 0, 0)
+a:scale(0.5)
+a:offset(1)    -- adds 1 to x, y, and z
+```
+
+### Geometry and measurement
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `vec:length()` | `number` | Euclidean length of the vector |
+| `vec:lengthSquared()` | `number` | Squared length (cheaper than `length()`) |
+| `vec:normalize()` | self | Normalize to unit length in place |
+| `vec:normalized()` | new vector | Return a normalized copy without mutating |
+| `vec:dot(other)` | `number` | Dot product with another vector |
+| `vec:cross(other)` | self | Cross product in place (Vec3 only) |
+| `vec:crossed(other)` | new Vec3 | Return a new cross product vector (Vec3 only) |
+| `vec:clampLength(min, max)` | self | Clamp the vector's length to `[min, max]` in place |
+| `vec:clamped(min, max)` | new vector | Return a length-clamped copy |
+
+```lua
+local v = vectors.vec3(3, 4, 0)
+print(v:length())          -- 5.0
+print(v:lengthSquared())   -- 25.0
+
+local unit = v:normalized()          -- does not change v
+v:normalize()                        -- changes v in place
+
+local a = vectors.vec3(1, 0, 0)
+local b = vectors.vec3(0, 1, 0)
+local d = a:dot(b)                   -- 0
+local c = a:crossed(b)               -- Vector3(0, 0, 1)
+```
+
+### Transformation
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `vec:transform(mat)` | self | Multiply this vector by a compatible matrix in place |
+| `vec:augmented([value])` | new Vec(n+1) | Extend to next size; `value` sets the new component (default `1`) |
+| `vec:copy()` | new vector | Return an independent copy |
+| `vec:unpack()` | multiple numbers | Return all components as separate return values |
+
+```lua
+local v3 = vectors.vec3(1, 2, 3)
+local v4 = v3:augmented()     -- Vector4(1, 2, 3, 1)
+local v4b = v3:augmented(0)   -- Vector4(1, 2, 3, 0)
+
+local a, b, c = v3:unpack()  -- a=1, b=2, c=3
+```
+
+### Component-wise operations
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `vec:floor()` | new vector | Floor each component |
+| `vec:ceil()` | new vector | Ceiling each component |
+| `vec:toRad()` | self | Convert each component from degrees to radians |
+| `vec:toDeg()` | self | Convert each component from radians to degrees |
+| `vec:applyFunc(func)` | self | Apply `func(value, index)` to each component |
+
+```lua
+local v = vectors.vec3(1.7, -2.3, 0.5)
+local floored = v:floor()   -- Vector3(1, -3, 0)
+local ceiled  = v:ceil()    -- Vector3(2, -2, 1)
+
+-- applyFunc example: clamp each component to [0, 1]
+v:applyFunc(function(val, idx)
+    return math.max(0, math.min(1, val))
+end)
+```
+
+---
+
+## The `matrices` global
+
+`matrices` creates transformation matrices. All constructors return a new matrix initialized to the identity unless columns are provided.
+
+### Matrix creation
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `matrices.mat2([col1, col2])` | `Mat2` | 2×2 matrix; no args = identity |
+| `matrices.mat3([col1, col2, col3])` | `Mat3` | 3×3 matrix; no args = identity |
+| `matrices.mat4([col1, col2, col3, col4])` | `Mat4` | 4×4 matrix; no args = identity |
+
+```lua
+local identity3 = matrices.mat3()
+
+-- Construct from column vectors
+local m = matrices.mat3(
+    vectors.vec3(1, 0, 0),
+    vectors.vec3(0, 1, 0),
+    vectors.vec3(0, 0, 1)
+)
+```
+
+### Rotation matrices
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `matrices.rotation2(angle)` | `Mat2` | 2D rotation by `angle` degrees |
+| `matrices.rotation3(x, y, z)` | `Mat3` | 3D rotation by ZYX Euler angles (degrees) |
+| `matrices.xRotation3(angle)` | `Mat3` | Rotation around X axis |
+| `matrices.yRotation3(angle)` | `Mat3` | Rotation around Y axis |
+| `matrices.zRotation3(angle)` | `Mat3` | Rotation around Z axis |
+| `matrices.rotation4(x, y, z)` | `Mat4` | 4×4 ZYX rotation |
+| `matrices.xRotation4(angle)` | `Mat4` | 4×4 X-axis rotation |
+| `matrices.yRotation4(angle)` | `Mat4` | 4×4 Y-axis rotation |
+| `matrices.zRotation4(angle)` | `Mat4` | 4×4 Z-axis rotation |
+
+### Scale matrices
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `matrices.scale2(x, y)` | `Mat2` | 2D scale matrix |
+| `matrices.scale3(x, y, z)` | `Mat3` | 3D scale matrix |
+| `matrices.scale4(x, y, z)` | `Mat4` | 4×4 scale matrix |
+
+### Translation matrices
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `matrices.translate3(x, y)` | `Mat3` | 2D translation packed into a 3×3 matrix |
+| `matrices.translate4(x, y, z)` | `Mat4` | 3D translation packed into a 4×4 matrix |
+
+```lua
+-- Rotate a direction vector 45 degrees around Y
+local rot = matrices.yRotation3(45)
+local dir = vectors.vec3(1, 0, 0)
+dir:transform(rot)   -- now pointing diagonally
+
+-- Combine scale and translation in a 4×4 matrix
+local scale = matrices.scale4(2, 2, 2)
+local trans = matrices.translate4(0, 5, 0)
+```
+
+---
+
+## Standard `math` library
+
+The standard Lua `math` library is fully available. Commonly used functions:
+
+```lua
+math.sin(x)     math.cos(x)     math.tan(x)
+math.asin(x)    math.acos(x)    math.atan(y, x)
+math.sqrt(x)    math.abs(x)
+math.floor(x)   math.ceil(x)
+math.max(a, b)  math.min(a, b)
+math.random()   math.random(n)  math.random(m, n)
+math.huge       -- infinity
+math.pi
+```

@@ -1,0 +1,163 @@
+---
+title: "TextureAPI — read, write, and create avatar textures"
+description: "The textures global lets you create, load, copy, and pixel-edit avatar textures at runtime, and provides access to any texture already registered to the avatar."
+---
+
+The `textures` global provides runtime access to your avatar's texture data. You can retrieve textures that were packed with the avatar, create new blank textures, load image data from base64 or a byte array, copy existing textures, and read or write individual pixels. Changes to a texture become visible on the next frame after you call methods that modify pixel data — no explicit `update()` call is needed; dirty state is tracked automatically.
+
+Up to 128 custom textures may be registered per avatar.
+
+## TextureAPI methods
+
+These methods are called on the `textures` global itself.
+
+### Creating textures
+
+**`newTexture(name, width, height)`** — create a new blank texture of the given pixel dimensions and register it under `name`. Returns a `Texture` object. The texture is initialized to a solid blue color.
+
+```lua
+local tex = textures:newTexture("myTex", 64, 64)
+```
+
+### Loading textures
+
+**`read(name, base64Text)`** / **`read(name, byteArray)`** — decode a PNG from a base64 string or a Lua byte-array table and register it as `name`. Returns a `Texture`.
+
+```lua
+-- From a base64 string
+local tex = textures:read("loaded", "iVBORw0KGgo...")
+
+-- From a table of bytes
+local bytes = { 137, 80, 78, 71, ... }
+local tex = textures:read("loaded", bytes)
+```
+
+**`fromVanilla(name, path)`** — copy a vanilla texture or texture atlas by resource location path and register it under `name`. Returns a `Texture`.
+
+```lua
+local skin = textures:fromVanilla("copiedSkin", "minecraft:textures/entity/steve.png")
+```
+
+### Copying textures
+
+**`copy(name, texture)`** — create a new `Texture` that is a pixel-for-pixel copy of an existing one, registered under `name`.
+
+```lua
+local backup = textures:copy("backup", textures:get("main"))
+```
+
+### Accessing textures
+
+**`get(name)`** — look up a registered texture by name. Returns `nil` if not found. Only finds textures registered at runtime via `newTexture`, `read`, etc.
+
+**`getTextures()`** — returns a list of all `Texture` objects currently active for this avatar, including both packed textures and runtime-created ones.
+
+```lua
+-- Index syntax also works (equivalent to get)
+local t = textures["myTex"]
+```
+
+## Emissive texture convention
+
+Figura recognizes emissive variants of a texture when their name ends in `_e`. If your avatar has a texture named `skin` and another named `skin_e`, the `_e` texture is automatically used as the emissive layer.
+
+## Texture object methods
+
+All methods below are called on a `Texture` object returned by the methods above.
+
+### Metadata
+
+**`getName()`** — returns the name the texture was registered under.
+
+**`getPath()`** — returns the full resource location string of this texture (e.g. `figura:avatar_tex/uuid/custom/...`).
+
+**`getDimensions()`** — returns the texture width and height as a `Vector2`.
+
+### Pixel operations
+
+**`getPixel(x, y)`** — returns the color of a pixel at `(x, y)` as a `Vector4` with components in the 0–1 range (RGBA).
+
+**`setPixel(x, y, rgb)`** / **`setPixel(x, y, rgba)`** / **`setPixel(x, y, r, g, b, a)`** — write a color to a single pixel. Color components are in the 0–1 range. Alias: `pixel(...)`.
+
+```lua
+local tex = textures:get("myTex")
+
+-- Read a pixel
+local color = tex:getPixel(10, 5)
+print(color.x, color.y, color.z, color.w)  -- r, g, b, a
+
+-- Write a pixel
+tex:setPixel(10, 5, 1, 0, 0, 1)  -- red at (10, 5)
+```
+
+**`fill(x, y, width, height, rgb)`** / **`fill(x, y, width, height, rgba)`** / **`fill(x, y, width, height, r, g, b, a)`** — fill a rectangular region with a solid color.
+
+```lua
+-- Fill a 16×16 block starting at (0, 0) with opaque green
+tex:fill(0, 0, 16, 16, 0, 1, 0, 1)
+```
+
+**`blit(options)`** — composite another texture onto this one. `options` is a Lua table with keys: `source` (Texture), `x`, `y`, `sourceX`, `sourceY`, `width`, `height`, and `mode` (blending mode string: `"source"`, `"normal"`, `"out"`, `"in"`, `"atop"`, `"xor"`).
+
+```lua
+local src = textures:get("overlay")
+tex:blit({
+    source = src,
+    x = 0, y = 0,
+    width = 16, height = 16,
+    mode = "normal"
+})
+```
+
+### Resizing
+
+**`resize(outputName, width, height)`** — create a new texture that is a nearest-neighbor rescaled copy of this one, registered under `outputName`. Returns the new `Texture`.
+
+```lua
+local small = tex:resize("smallVersion", 16, 16)
+```
+
+## Render types
+
+Render types control how a texture is composited into the world. They are set per model part via `setPrimaryRenderType` and `setSecondaryRenderType` on a `ModelPart`, or per sprite via `setRenderType` on a `SpriteTask`. The available values (from the `RenderTypes` enum) are:
+
+| Name | Effect |
+|---|---|
+| `CUTOUT` | Alpha-tested, no back-face culling |
+| `CUTOUT_CULL` | Alpha-tested, with back-face culling |
+| `CUTOUT_EMISSIVE_SOLID` | Alpha-tested, full-brightness emissive |
+| `TRANSLUCENT` | Alpha-blended, no culling |
+| `TRANSLUCENT_CULL` | Alpha-blended, with culling |
+| `EMISSIVE` | Full-bright, uses the `eyes` render type |
+| `EMISSIVE_SOLID` | Full-bright solid (beacon beam style) |
+| `EYES` | Same as `EMISSIVE` |
+| `END_PORTAL` | Swirling end-portal effect (no texture) |
+| `END_GATEWAY` | Swirling end-gateway effect (no texture) |
+| `TEXTURED_PORTAL` | Portal effect with a texture |
+| `GLINT` | Enchantment glint (no texture) |
+| `GLINT2` | Alternate glint (no texture) |
+| `TEXTURED_GLINT` | Glint effect with a custom texture |
+| `LINES` | Rendered as lines |
+| `LINES_STRIP` | Rendered as a line strip |
+| `SOLID` | Solid color, no texture |
+| `BLURRY` | Translucent with bilinear filtering |
+
+## Full example
+
+```lua
+-- Create a new texture, draw a red diagonal line, and apply it to a part
+function events.ENTITY_INIT()
+    local tex = textures:newTexture("dynamic", 32, 32)
+
+    -- Fill background white
+    tex:fill(0, 0, 32, 32, 1, 1, 1, 1)
+
+    -- Draw a red pixel stripe
+    for i = 0, 31 do
+        tex:setPixel(i, i, 1, 0, 0, 1)
+    end
+
+    -- Apply to model part
+    models.MyModel.Body:setPrimaryTexture("custom", tex)
+end
+```

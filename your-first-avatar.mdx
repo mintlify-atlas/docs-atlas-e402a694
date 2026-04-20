@@ -1,0 +1,174 @@
+---
+title: "Create and upload your first custom Figura avatar"
+description: "Build a custom Minecraft player model in Blockbench, set up the required avatar folder structure, and upload it using the Figura in-game menu."
+---
+
+Figura avatars are folders that contain a Blockbench model, optional Lua scripts, textures, and a required `avatar.json` file. This guide walks you through creating a minimal avatar from scratch, placing it in the correct location, and equipping it in-game.
+
+## Prerequisites
+
+- Figura installed and working (see [Installation](/installation))
+- [Blockbench](https://www.blockbench.net/) installed on your computer
+
+## Create your avatar
+
+<Steps>
+  <Step title="Install Blockbench">
+    Download and install [Blockbench](https://www.blockbench.net/) — the free 3D modelling tool used to build Figura avatars. A desktop version is available for Windows, macOS, and Linux; a web version also exists at [web.blockbench.net](https://web.blockbench.net/).
+
+    <Tip>
+      Katt has created a Blockbench plugin that adds a dedicated Figura model format with extra features. Search for **Figura** in the Blockbench plugin browser (**File → Plugins**) and install it from there.
+    </Tip>
+  </Step>
+  <Step title="Create a new Blockbench project">
+    Open Blockbench and create a new project:
+
+    - If you installed the Figura plugin: select **Figura Avatar** as the model format.
+    - Otherwise: select **Generic Model** — this works without the plugin.
+
+    Design your model by adding cubes, groups, and textures. The root-level groups in your model become the parts you can reference from Lua scripts.
+  </Step>
+  <Step title="Create the avatar folder">
+    Figura looks for avatars inside:
+
+    ```
+    .minecraft/figura/avatars/
+    ```
+
+    Create a new subfolder for your avatar:
+
+    ```
+    .minecraft/figura/avatars/my-avatar/
+    ```
+
+    You can nest folders for organisation — Figura scans the entire `avatars/` directory tree for valid avatar folders.
+  </Step>
+  <Step title="Create avatar.json">
+    Inside your avatar folder, create a file named exactly **`avatar.json`**.
+
+    <Warning>
+      This file is **required**. Figura will not recognise the folder as an avatar unless `avatar.json` is present. Check that your file manager is not hiding the `.json` extension.
+    </Warning>
+
+    A completely empty JSON object is valid:
+
+    ```json avatar.json
+    {}
+    ```
+
+    You can also add optional metadata:
+
+    ```json avatar.json
+    {
+      "name": "My First Avatar",
+      "description": "A simple Figura avatar.",
+      "authors": ["YourUsername"]
+    }
+    ```
+  </Step>
+  <Step title="Export your model from Blockbench">
+    In Blockbench, go to **File → Export** and choose the appropriate format:
+
+    - **Figura Avatar** (if you used the Figura plugin)
+    - **Generic Model** (`.bbmodel`) otherwise
+
+    Save the exported file directly into your avatar folder:
+
+    ```
+    .minecraft/figura/avatars/my-avatar/model.bbmodel
+    ```
+
+    Your avatar folder should now look like this:
+
+    ```
+    .minecraft/figura/avatars/my-avatar/
+    ├── avatar.json
+    └── model.bbmodel
+    ```
+  </Step>
+  <Step title="Equip and upload your avatar">
+    Launch Minecraft with Figura installed. Press the Figura menu key (default: **`**) to open the avatar browser. Your avatar folder should appear in the list.
+
+    Select it, then click **Upload**. Figura authenticates with the backend server and uploads your avatar. Other players running Figura will see it automatically.
+
+    <Note>
+      If your avatar does not appear in the list, confirm that `avatar.json` exists in the folder and that the file extension is correct (not `avatar.json.txt`).
+    </Note>
+  </Step>
+</Steps>
+
+## Hide the vanilla player model
+
+By default, Minecraft renders both your Figura avatar and the original player model on top of each other. Add a Lua script to hide the vanilla model.
+
+Create a file named `script.lua` inside your avatar folder:
+
+```lua script.lua
+-- Hide the entire vanilla player model (player, armor, elytra, held items)
+vanilla_model.ALL:setVisible(false)
+```
+
+To hide only specific parts:
+
+```lua script.lua
+-- Hide only the player body, not armor or held items
+vanilla_model.PLAYER:setVisible(false)
+
+-- Hide only armor
+vanilla_model.ARMOR:setVisible(false)
+```
+
+Check the in-game Figura docs (**`** menu → **Docs**) for the full list of `vanilla_model` parts.
+
+## Frequently asked questions
+
+<AccordionGroup>
+  <Accordion title="My avatar doesn't appear in the Figura list">
+    Check that your avatar folder contains a file named exactly `avatar.json`. The file can be completely empty (`{}`), but it must be present for Figura to recognise the folder as an avatar. Also verify that your file manager is not hiding the `.json` extension — the actual file must not be named `avatar.json.txt`.
+  </Accordion>
+  <Accordion title="How do I play a Blockbench animation?">
+    Add a Lua script to your avatar folder and call:
+
+    ```lua
+    animations.modelName.animationName:play()
+    ```
+
+    Where `modelName` is the name of your `.bbmodel` file (without the extension) and `animationName` is the name of the animation as defined in Blockbench. The `animations` table is a global provided by Figura automatically.
+  </Accordion>
+  <Accordion title="What are pings and how do I use them?">
+    Pings are Lua functions that run for every player who has loaded your avatar — not just the host. They are used to sync events like keypresses or action wheel actions across clients.
+
+    Define a ping:
+
+    ```lua
+    function pings.myPing(arg1, arg2)
+      -- code that runs for all viewers
+    end
+    ```
+
+    Call it like a normal function:
+
+    ```lua
+    pings.myPing("Hello", "World")
+    ```
+
+    Note that pings are rate-limited and have a maximum payload size.
+  </Accordion>
+  <Accordion title="How do I add an emissive (glowing) texture?">
+    Name the emissive texture the same as its non-emissive counterpart, then append `_e` to the file name. For example, if your base texture is `skin.png`, the emissive version is `skin_e.png`.
+
+    Set any area you do not want to glow to **transparent black** (`#00000000`). This also ensures compatibility with shader mods.
+  </Accordion>
+  <Accordion title="Can I find avatars made by other players?">
+    Yes — the **showcase** channel in the [official FiguraMC Discord](https://discord.figuramc.org/) is the primary place to find community-made avatars. An in-game and web-based avatar browser is currently in development.
+  </Accordion>
+  <Accordion title="Where can I learn Lua scripting for Figura?">
+    Several community resources are available:
+
+    - [Lua quickstart](https://manuel-3.github.io/lua-quickstart) by Manuel — a beginner-friendly introduction to Lua.
+    - [Chloe's Figura tutorial series](https://www.youtube.com/playlist?list=PLNz7v2g2SFA8lOQUDS4z4-gIDLi_dWAhl) on YouTube — video walkthroughs covering modelling and scripting.
+    - [VSDocs by GrandpaScout](https://github.com/GrandpaScout/FiguraRewriteVSDocs/wiki) — Figura API autocomplete for VS Code.
+    - Manuel's [Figura VS Code extension](https://marketplace.visualstudio.com/items?itemName=Manuel-Underscore.figura) — adds autocomplete for model paths and more.
+    - In-game docs panel — press **`** to open the Figura menu and navigate to **Docs**.
+  </Accordion>
+</AccordionGroup>

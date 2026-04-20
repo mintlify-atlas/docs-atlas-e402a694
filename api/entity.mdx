@@ -1,0 +1,599 @@
+---
+title: "EntityAPI — position, state, and entity queries"
+description: "EntityAPI is the base class for all entity objects in Figura. It exposes position, rotation, state, NBT, and raycasting for any entity in the world."
+---
+
+EntityAPI is the base type for every entity object in Figura scripts. You encounter it whenever you receive an entity reference — through the `player` global, `world.getEntity(uuid)`, passenger lists, or raycasting results. All more-specific types (`LivingEntityAPI`, `PlayerAPI`) extend EntityAPI and inherit every method listed here.
+
+## Loaded state
+
+Before reading data from an entity you should confirm it is still present in the world.
+
+### `isLoaded()`
+
+Returns `true` if the entity is currently loaded in the client world. An entity can become unloaded if it moves out of render distance or is removed.
+
+```lua
+if player:isLoaded() then
+  print(player:getPos())
+end
+```
+
+**Returns:** `boolean`
+
+---
+
+### `isAlive()`
+
+Returns `true` if the entity has not been removed or killed.
+
+```lua
+if entity:isAlive() then
+  -- safe to query further data
+end
+```
+
+**Returns:** `boolean`
+
+---
+
+## Identity
+
+### `getUUID()`
+
+Returns the entity's UUID as a hyphenated string (`"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"`).
+
+```lua
+local id = player:getUUID()
+print(id)
+```
+
+**Returns:** `string`
+
+---
+
+### `getType()`
+
+Returns the registry name of the entity type, for example `"minecraft:zombie"` or `"minecraft:player"`.
+
+```lua
+print(entity:getType())  -- e.g. "minecraft:creeper"
+```
+
+**Returns:** `string`
+
+---
+
+### `getName()`
+
+Returns the display name of the entity. For players this is the player name; for mobs it is the custom name if set, otherwise the entity type name.
+
+```lua
+print(entity:getName())
+```
+
+**Returns:** `string`
+
+---
+
+### `isLiving()`
+
+Returns `true` if this entity is a `LivingEntityAPI` instance (mobs, players, etc.).
+
+```lua
+if entity:isLiving() then
+  -- can safely cast to LivingEntityAPI methods
+end
+```
+
+**Returns:** `boolean`
+
+---
+
+### `isPlayer()`
+
+Returns `true` if this entity is a `PlayerAPI` instance.
+
+```lua
+if entity:isPlayer() then
+  print(entity:getGamemode())
+end
+```
+
+**Returns:** `boolean`
+
+---
+
+## Position and motion
+
+### `getPos([delta])`
+
+Returns the interpolated world position of the entity as a `Vector3`.
+
+<ParamField path="delta" type="number">
+  Interpolation factor between the previous and current tick position. Defaults to `1.0` (current tick).
+</ParamField>
+
+```lua
+local pos = player:getPos()
+print(pos.x, pos.y, pos.z)
+
+-- Smooth interpolated position for rendering
+local smoothPos = player:getPos(delta)
+```
+
+**Returns:** `Vector3`
+
+---
+
+### `getRot([delta])`
+
+Returns the entity's head rotation as a `Vector2` where `x` is pitch (up/down) and `y` is yaw (left/right).
+
+<ParamField path="delta" type="number">
+  Interpolation factor. Defaults to `1.0`.
+</ParamField>
+
+```lua
+local rot = player:getRot()
+print("pitch:", rot.x, "yaw:", rot.y)
+```
+
+**Returns:** `Vector2`
+
+---
+
+### `getVelocity()`
+
+Returns the entity's velocity this tick as a `Vector3` (difference between current and previous position).
+
+```lua
+local vel = player:getVelocity()
+local speed = vel:length()
+```
+
+**Returns:** `Vector3`
+
+---
+
+### `getLookDir()`
+
+Returns a normalized `Vector3` pointing in the direction the entity's head is facing.
+
+```lua
+local dir = player:getLookDir()
+```
+
+**Returns:** `Vector3`
+
+---
+
+### `getEyeHeight()`
+
+Returns the height of the entity's eye level above its feet, in blocks. This changes with pose (e.g. crouching lowers it).
+
+```lua
+local eyeH = entity:getEyeHeight()
+```
+
+**Returns:** `number`
+
+---
+
+### `getEyeY()`
+
+Returns the absolute Y world coordinate of the entity's eyes.
+
+```lua
+local eyeY = player:getEyeY()
+```
+
+**Returns:** `number`
+
+---
+
+## Bounding box and dimensions
+
+### `getBoundingBox()`
+
+Returns the entity's axis-aligned bounding box dimensions as a `Vector3` where `x` and `z` are the width and `y` is the height. Note: this returns dimensions, not world coordinates.
+
+```lua
+local bb = entity:getBoundingBox()
+print("width:", bb.x, "height:", bb.y)
+```
+
+**Returns:** `Vector3`
+
+---
+
+## State flags
+
+### `isOnGround()`
+
+Returns `true` if the entity is standing on a solid surface.
+
+```lua
+if player:isOnGround() then
+  -- grounded logic
+end
+```
+
+**Returns:** `boolean`
+
+---
+
+### `isInWater()`
+
+Returns `true` if the entity is touching a water block.
+
+**Returns:** `boolean`
+
+---
+
+### `isUnderwater()`
+
+Returns `true` if the entity's eyes are submerged in water.
+
+**Returns:** `boolean`
+
+---
+
+### `isWet()`
+
+Returns `true` if the entity is in water, rain, or a bubble column.
+
+**Returns:** `boolean`
+
+---
+
+### `isInLava()`
+
+Returns `true` if the entity is touching lava.
+
+**Returns:** `boolean`
+
+---
+
+### `isInRain()`
+
+Returns `true` if the entity's block position is being rained on.
+
+**Returns:** `boolean`
+
+---
+
+### `isOnFire()`
+
+Returns `true` if the entity is currently displaying fire animation (on fire).
+
+**Returns:** `boolean`
+
+---
+
+### `isSprinting()`
+
+Returns `true` if the entity is in the sprinting state.
+
+**Returns:** `boolean`
+
+---
+
+### `isSneaking()`
+
+Returns `true` if the entity is in the discrete (sneaking) state. This uses the network sneaking flag.
+
+**Returns:** `boolean`
+
+---
+
+### `isCrouching()`
+
+Returns `true` if the entity's visual pose is crouching.
+
+**Returns:** `boolean`
+
+---
+
+### `isMoving([ignoreY])`
+
+Returns `true` if the entity moved since the last tick.
+
+<ParamField path="ignoreY" type="boolean">
+  When `true`, only horizontal movement is considered. Defaults to `false`.
+</ParamField>
+
+```lua
+if player:isMoving(true) then
+  -- player moved horizontally this tick
+end
+```
+
+**Returns:** `boolean`
+
+---
+
+### `isFalling()`
+
+Returns `true` if the entity is not on the ground and its Y position decreased this tick.
+
+**Returns:** `boolean`
+
+---
+
+### `isGlowing()`
+
+Returns `true` if the entity currently has the glowing effect.
+
+**Returns:** `boolean`
+
+---
+
+### `isInvisible()`
+
+Returns `true` if the entity is invisible.
+
+**Returns:** `boolean`
+
+---
+
+### `isSilent()`
+
+Returns `true` if the entity is set to make no sounds.
+
+**Returns:** `boolean`
+
+---
+
+### `hasAvatar()`
+
+Returns `true` if the entity has a Figura avatar loaded.
+
+```lua
+if entity:hasAvatar() then
+  local vars = entity:getVariable()
+end
+```
+
+**Returns:** `boolean`
+
+---
+
+## Pose and dimension
+
+### `getPose()`
+
+Returns the entity's current pose as a string, for example `"STANDING"`, `"CROUCHING"`, `"SWIMMING"`, or `"SLEEPING"`.
+
+```lua
+print(player:getPose())
+```
+
+**Returns:** `string`
+
+---
+
+### `getDimensionName()`
+
+Returns the registry name of the dimension the entity is currently in, e.g. `"minecraft:overworld"`.
+
+```lua
+print(entity:getDimensionName())
+```
+
+**Returns:** `string`
+
+---
+
+### `getFrozenTicks()`
+
+Returns the number of ticks the entity has been inside powder snow.
+
+**Returns:** `integer`
+
+---
+
+### `getMaxAir()`
+
+Returns the entity's maximum air supply in ticks.
+
+**Returns:** `integer`
+
+---
+
+### `getPermissionLevel()`
+
+Returns the entity's operator permission level (0–4). Most players are 0; server operators are 2 or higher.
+
+```lua
+if entity:getPermissionLevel() >= 2 then
+  print("This entity is an operator.")
+end
+```
+
+**Returns:** `integer`
+
+---
+
+## Inventory
+
+### `getItem(index)`
+
+Returns the `ItemStack` in the entity's inventory slot at the given 1-based index, or `nil` if the slot is empty or out of range.
+
+<ParamField path="index" type="integer" required>
+  1-based slot index across all of the entity's item slots.
+</ParamField>
+
+```lua
+local helmet = entity:getItem(1)
+if helmet then
+  print(helmet:getName())
+end
+```
+
+**Returns:** `ItemStack` or `nil`
+
+---
+
+## Vehicles and passengers
+
+### `getVehicle()`
+
+Returns the entity that this entity is riding, or `nil` if not riding anything.
+
+```lua
+local mount = player:getVehicle()
+if mount then
+  print("Riding:", mount:getType())
+end
+```
+
+**Returns:** `EntityAPI` or `nil`
+
+---
+
+### `getPassengers()`
+
+Returns a list of entities currently riding this entity.
+
+```lua
+for _, passenger in ipairs(entity:getPassengers()) do
+  print(passenger:getName())
+end
+```
+
+**Returns:** `EntityAPI[]`
+
+---
+
+### `getControllingPassenger()`
+
+Returns the passenger that is controlling this entity (e.g. the player steering a pig), or `nil`.
+
+**Returns:** `EntityAPI` or `nil`
+
+---
+
+### `getControlledVehicle()`
+
+Returns the vehicle that this entity is actively controlling, or `nil`.
+
+**Returns:** `EntityAPI` or `nil`
+
+---
+
+## Container and inventory checks
+
+### `hasContainer()`
+
+Returns `true` if the entity implements a container (e.g. a chest minecart).
+
+**Returns:** `boolean`
+
+---
+
+### `hasInventory()`
+
+Returns `true` if the entity has a custom inventory screen (e.g. a horse).
+
+**Returns:** `boolean`
+
+---
+
+## Raycasting
+
+### `getTargetedBlock([ignoreLiquids[, distance]])`
+
+Performs a block raycast from the entity's eye position along its look direction.
+
+<ParamField path="ignoreLiquids" type="boolean">
+  When `true`, water and lava are treated as air. Defaults to `false`.
+</ParamField>
+<ParamField path="distance" type="number">
+  Maximum raycast distance in blocks. Clamped to `[-20, 20]`. Defaults to `20`.
+</ParamField>
+
+```lua
+local block, hitPos, side = table.unpack(player:getTargetedBlock(false, 5))
+if block then
+  print("Looking at:", block:getID())
+end
+```
+
+**Returns:** `BlockState, Vector3, string` (block, hit position, face) or `nil` on miss
+
+---
+
+### `getTargetedEntity([distance])`
+
+Performs an entity raycast from the entity's eye position.
+
+<ParamField path="distance" type="number">
+  Maximum distance in blocks. Clamped to `[0, 20]`. Defaults to `20`.
+</ParamField>
+
+```lua
+local hit, hitPos = table.unpack(player:getTargetedEntity(10) or {})
+if hit then
+  print("Entity in sights:", hit:getName())
+end
+```
+
+**Returns:** `EntityAPI, Vector3` or `nil` on miss
+
+---
+
+### `getNearestEntity([type[, radius]])`
+
+Returns the nearest entity (optionally filtered by type) within a radius around this entity.
+
+<ParamField path="type" type="string">
+  Entity type registry name, e.g. `"minecraft:zombie"`. Pass `nil` to match any type.
+</ParamField>
+<ParamField path="radius" type="number">
+  Search radius in blocks. Defaults to `20`.
+</ParamField>
+
+```lua
+local nearest = player:getNearestEntity("minecraft:zombie", 10)
+if nearest then
+  print("Nearby zombie:", nearest:getPos())
+end
+```
+
+**Returns:** `EntityAPI` or `nil`
+
+---
+
+## NBT
+
+### `getNbt()`
+
+Returns a read-only Lua table containing the entity's NBT compound data as serialized by Minecraft.
+
+```lua
+local nbt = player:getNbt()
+print(nbt.Health)
+```
+
+**Returns:** `table`
+
+---
+
+## Avatar variables
+
+### `getVariable([key])`
+
+Returns the avatar variable(s) stored in another entity's Figura avatar. With no argument, returns the full variable table; with a `key`, returns a single value.
+
+<ParamField path="key" type="string">
+  Key to retrieve. Omit to get the whole table.
+</ParamField>
+
+```lua
+-- Read the "mood" variable from a nearby player's avatar
+local mood = someEntity:getVariable("mood")
+```
+
+**Returns:** `any` (value at key) or `table` (all variables)

@@ -1,0 +1,162 @@
+---
+title: "Game event callbacks in Figura Lua scripts"
+description: "The events global lets you register Lua callbacks for ticks, render frames, input events, chat messages, and more. Handlers are called automatically by Figura."
+---
+
+Figura exposes a global table called `events` that contains a named `Event` object for every game event the runtime supports. You attach one or more Lua functions to an event using `:register()`, and Figura calls them automatically whenever that event fires. Multiple handlers can be registered on the same event, and they all run in the order they were registered.
+
+## Registering a handler
+
+Call `:register(func)` on any event to attach a callback:
+
+```lua
+events.TICK:register(function()
+    -- runs every game tick (20 times per second)
+end)
+```
+
+You can also assign a function directly to the event name as a shorthand:
+
+```lua
+events.TICK = function()
+    -- equivalent shorthand — replaces any previously assigned function
+end
+```
+
+## Named registration and removal
+
+Give a handler a name so you can remove it later without holding a reference to the function object:
+
+```lua
+events.TICK:register(function()
+    -- my logic
+end, "myTickHandler")
+
+-- remove by name
+events.TICK:remove("myTickHandler")
+```
+
+You can also remove a handler by passing the original function reference, or clear all handlers for an event at once:
+
+```lua
+events.TICK:clear()
+```
+
+<Note>
+Each event can hold at most 1 024 registered functions. Registering more than that raises a Lua error.
+</Note>
+
+## All available events
+
+<AccordionGroup>
+  <Accordion title="Lifecycle events">
+    | Event | When it fires |
+    |---|---|
+    | `ENTITY_INIT` | Once, when the avatar finishes initialising. Use this for one-time setup that needs the entity to exist. |
+    | `RESOURCE_RELOAD` | When the client reloads resources (e.g. F3+T). Useful for re-applying texture changes. |
+  </Accordion>
+
+  <Accordion title="Tick events">
+    | Event | When it fires |
+    |---|---|
+    | `TICK` | Every client tick — 20 times per second. The main place for game-logic updates. |
+    | `WORLD_TICK` | Every world tick. Similar to `TICK` but tied to world time rather than the client loop. |
+  </Accordion>
+
+  <Accordion title="Render events">
+    Render callbacks receive a `delta` argument: a `number` between `0` and `1` representing fractional progress between the previous and upcoming tick. Use it to smoothly interpolate values.
+
+    | Event | When it fires |
+    |---|---|
+    | `PRE_RENDER` | Just before the avatar is rendered each frame. Receives `delta`. |
+    | `RENDER` | During avatar rendering each frame. Receives `delta`. |
+    | `POST_RENDER` | After the avatar is rendered each frame. Receives `delta`. |
+    | `WORLD_RENDER` | During world rendering each frame. Receives `delta`. |
+    | `POST_WORLD_RENDER` | After world rendering each frame. Receives `delta`. |
+  </Accordion>
+
+  <Accordion title="Input events">
+    | Event | Arguments | Notes |
+    |---|---|---|
+    | `KEY_PRESS` | `key, action, modifiers` | `action`: `1` = pressed, `0` = released, `2` = held. `key` is a GLFW key code. |
+    | `CHAR_TYPED` | `char` | The Unicode character that was typed, as a string. |
+    | `MOUSE_PRESS` | `button, action, modifiers` | Same action values as `KEY_PRESS`. |
+    | `MOUSE_SCROLL` | `delta` | Positive values for scrolling up, negative for down. |
+    | `MOUSE_MOVE` | `deltaX, deltaY` | Raw mouse movement deltas. |
+  </Accordion>
+
+  <Accordion title="Chat events">
+    | Event | Arguments | Notes |
+    |---|---|---|
+    | `CHAT_SEND_MESSAGE` | `message` | Called when the local player sends a chat message. This event is **piped** — returning a modified string from your handler changes the message that is sent. Return `nil` or an empty string to cancel. |
+    | `CHAT_RECEIVE_MESSAGE` | `message, data` | Called when any chat message is received by the client. |
+  </Accordion>
+
+  <Accordion title="Entity and item events">
+    | Event | Arguments | Notes |
+    |---|---|---|
+    | `USE_ITEM` | `item, action, particleCount` | Called when the avatar's player uses an item. |
+    | `DAMAGE` | `amount, source` | Called when the avatar's player takes damage. |
+    | `TOTEM` | — | Called when the player pops a totem of undying. |
+  </Accordion>
+
+  <Accordion title="Render-injection events">
+    These events fire during specific rendering passes and receive the partial-tick `delta` plus additional context.
+
+    | Event | Notes |
+    |---|---|
+    | `SKULL_RENDER` | Fires when a player skull block or item is rendered. |
+    | `ARROW_RENDER` | Fires when an arrow entity belonging to the avatar is rendered. |
+    | `TRIDENT_RENDER` | Fires when a trident entity belonging to the avatar is rendered. |
+    | `ITEM_RENDER` | Fires when an item held or worn by the avatar is rendered. |
+    | `ON_PLAY_SOUND` | Fires when a sound is played. |
+  </Accordion>
+</AccordionGroup>
+
+## Code examples
+
+```lua
+-- Tick event — runs 20 times per second
+events.TICK:register(function()
+    -- game logic here
+end)
+
+-- Render event — receives partial ticks delta (0 to 1)
+events.RENDER:register(function(delta)
+    -- delta is between 0 and 1
+    models.MyModel:setPos(0, math.sin(world.getTime() + delta) * 0.5, 0)
+end)
+
+-- Key press event
+events.KEY_PRESS:register(function(key, action, modifiers)
+    if action == 1 then -- 1 = pressed
+        -- handle keypress
+    end
+end)
+
+-- Filter outgoing chat messages (piped event)
+events.CHAT_SEND_MESSAGE:register(function(message)
+    -- prepend avatar name to every sent message
+    return "[MyAvatar] " .. message
+end)
+
+-- One-time setup after avatar initialises
+events.ENTITY_INIT:register(function()
+    vanilla_model.ALL:setVisible(false)
+end)
+```
+
+## Checking registered handler count
+
+Use `:getRegisteredCount(name)` to check how many handlers are registered under a given name:
+
+```lua
+events.TICK:register(function() end, "myHandler")
+print(events.TICK:getRegisteredCount("myHandler"))  -- prints 1
+```
+
+The `#` operator returns the total number of handlers registered on an event:
+
+```lua
+print(#events.TICK)  -- total handler count
+```

@@ -1,0 +1,295 @@
+---
+title: "KeybindAPI — register custom keyboard shortcuts"
+description: "The keybinds global lets you register named keyboard shortcuts for your avatar. Callbacks fire on press and release, but only for the host player."
+---
+
+The `keybinds` global lets you register custom keyboard shortcuts for your avatar. Each keybind has a name, a default key, optional press and release callbacks, and can be enabled or disabled at runtime. Keybind callbacks only fire for the **host player** — viewers of the avatar never trigger them.
+
+---
+
+## KeybindAPI methods
+
+### newKeybind
+
+Creates and registers a new `Keybind`. The `name` is required; `key` and `gui` are optional.
+
+<ParamField path="name" type="string" required>
+  A human-readable label for this keybind.
+</ParamField>
+
+<ParamField path="key" type="string">
+  The default key in Minecraft key-name format, e.g. `"key.keyboard.g"`. Defaults to `"key.keyboard.unknown"` if omitted.
+</ParamField>
+
+<ParamField path="gui" type="boolean">
+  When `true`, the keybind fires even while a GUI screen is open. Defaults to `false`.
+</ParamField>
+
+<ResponseField name="return" type="Keybind">
+  The newly registered `Keybind` object.
+</ResponseField>
+
+```lua
+local myKey = keybinds:newKeybind("Toggle Wings", "key.keyboard.g")
+-- alias:
+local myKey2 = keybinds:of("Toggle Wings", "key.keyboard.g")
+```
+
+---
+
+### fromVanilla
+
+Creates a new `Keybind` whose default key is taken from an existing vanilla Minecraft key binding. The key is looked up by its vanilla ID string.
+
+<ParamField path="id" type="string" required>
+  The vanilla key binding ID, e.g. `"key.jump"` or `"key.attack"`. Throws an error if the ID is not found.
+</ParamField>
+
+<ResponseField name="return" type="Keybind">
+  A new `Keybind` pre-set to the current binding of that vanilla key.
+</ResponseField>
+
+```lua
+local jumpKey = keybinds:fromVanilla("key.jump")
+jumpKey:onPress(function()
+    print("Jumped!")
+end)
+```
+
+---
+
+### getVanillaKey
+
+Returns the current save string for a vanilla key binding without creating a `Keybind` object.
+
+<ParamField path="id" type="string" required>
+  The vanilla key binding ID.
+</ParamField>
+
+<ResponseField name="return" type="string | nil">
+  The key save string (e.g. `"key.keyboard.space"`), or `nil` if the ID was not found.
+</ResponseField>
+
+```lua
+print(keybinds:getVanillaKey("key.jump"))
+```
+
+---
+
+### getKeybinds
+
+Returns a table mapping each registered keybind's name to its `Keybind` object.
+
+<ResponseField name="return" type="table&lt;string, Keybind&gt;">
+  All keybinds registered by this avatar.
+</ResponseField>
+
+```lua
+for name, kb in pairs(keybinds:getKeybinds()) do
+    print(name, kb:getKey())
+end
+```
+
+---
+
+## Keybind methods
+
+These methods are available on individual `Keybind` objects returned by `newKeybind` or `fromVanilla`.
+
+### setOnPress / onPress
+
+Sets the function called when the key is pressed. The callback receives the modifier bitmask and the `Keybind` object. Returning `true` from the callback suppresses the vanilla key action.
+
+<ParamField path="function" type="function">
+  Callback receiving `(modifiers: integer, keybind: Keybind)`.
+</ParamField>
+
+<ResponseField name="return" type="Keybind">
+  Returns itself for chaining.
+</ResponseField>
+
+```lua
+myKey:setOnPress(function(modifiers, kb)
+    print("Pressed! Modifiers: " .. modifiers)
+end)
+-- alias:
+myKey:onPress(function() end)
+```
+
+---
+
+### setOnRelease / onRelease
+
+Sets the function called when the key is released. The callback receives the modifier bitmask and the `Keybind` object.
+
+<ParamField path="function" type="function">
+  Callback receiving `(modifiers: integer, keybind: Keybind)`.
+</ParamField>
+
+<ResponseField name="return" type="Keybind">
+  Returns itself for chaining.
+</ResponseField>
+
+```lua
+myKey:onRelease(function(modifiers, kb)
+    print("Released!")
+end)
+```
+
+---
+
+### isPressed
+
+Returns whether the key is currently held down. When `gui` mode is disabled (the default), this returns `false` while a GUI screen is open.
+
+<ResponseField name="return" type="boolean">
+  `true` if the key is currently down.
+</ResponseField>
+
+```lua
+if myKey:isPressed() then
+    print("Key is held")
+end
+```
+
+---
+
+### isEnabled / setEnabled / enabled
+
+Gets or sets whether this keybind is active. Disabled keybinds do not fire their callbacks and are not considered pressed.
+
+<ParamField path="bool" type="boolean">
+  `true` to enable, `false` to disable.
+</ParamField>
+
+```lua
+myKey:setEnabled(false)   -- disable
+myKey:setEnabled(true)    -- re-enable
+-- alias:
+myKey:enabled(true)
+print(myKey:isEnabled())
+```
+
+---
+
+### isGuiEnabled / setGUI / gui
+
+Gets or sets whether the keybind fires while a GUI screen is open.
+
+```lua
+myKey:setGUI(true)
+-- alias:
+myKey:gui(true)
+print(myKey:isGuiEnabled())
+```
+
+---
+
+### getKey / setKey / key
+
+Gets or sets the key as a Minecraft key-name string. The setter accepts the same format as `newKeybind`'s `key` parameter.
+
+<ParamField path="key" type="string" required>
+  Key name string, e.g. `"key.keyboard.h"`.
+</ParamField>
+
+```lua
+myKey:setKey("key.keyboard.h")
+-- alias:
+myKey:key("key.keyboard.h")
+print(myKey:getKey())  -- "key.keyboard.h"
+```
+
+---
+
+### getKeyName
+
+Returns the localised, human-readable display name for the current key (e.g. `"H"`).
+
+<ResponseField name="return" type="string">
+  Localised display name.
+</ResponseField>
+
+---
+
+### getName
+
+Returns the name string this keybind was created with.
+
+<ResponseField name="return" type="string">
+  The keybind label.
+</ResponseField>
+
+```lua
+print(myKey:getName())  -- "Toggle Wings"
+```
+
+---
+
+### getID
+
+Returns the integer key code (GLFW/InputConstants value) for the bound key.
+
+<ResponseField name="return" type="integer">
+  The GLFW key value.
+</ResponseField>
+
+---
+
+### isDefault
+
+Returns whether the key is still set to the default value it was created with.
+
+<ResponseField name="return" type="boolean">
+  `true` if the key has not been changed from its default.
+</ResponseField>
+
+---
+
+## Keybind fields
+
+These function fields can be assigned directly on a `Keybind` object.
+
+| Field | Type | Description |
+|---|---|---|
+| `press` | `function` | Called on key press. Same as `setOnPress`. |
+| `release` | `function` | Called on key release. Same as `setOnRelease`. |
+
+---
+
+## Key name format
+
+Keys follow the Minecraft/LWJGL key-name convention:
+
+| Pattern | Examples |
+|---|---|
+| `"key.keyboard.x"` | `"key.keyboard.g"`, `"key.keyboard.space"` |
+| `"key.keyboard.left.shift"` | Left shift |
+| `"key.mouse.left"` | Left mouse button |
+| `"key.keyboard.unknown"` | Unbound / unknown |
+
+Use `keybinds:getVanillaKey("key.jump")` to look up the player-configured key for a vanilla action.
+
+---
+
+## Complete example
+
+```lua
+local wingsVisible = true
+
+local wingKey = keybinds:newKeybind("Toggle Wings", "key.keyboard.g")
+
+wingKey:onPress(function()
+    wingsVisible = not wingsVisible
+    -- Use a ping so all viewers see the change
+    pings.setWingsVisible(wingsVisible)
+end)
+
+function pings.setWingsVisible(visible)
+    models.MyAvatar.Wings:setVisible(visible)
+end
+```
+
+<Note>
+  Keybind callbacks only run for the **host player**. If you need to sync visual changes to all viewers, call a ping from inside the callback.
+</Note>

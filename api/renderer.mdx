@@ -1,0 +1,651 @@
+---
+title: "RendererAPI — camera, HUD, and render flags"
+description: "The renderer global controls how the avatar and scene are drawn: fire, vehicle, HUD, camera transforms, FOV, shadow radius, and arm visibility."
+---
+
+The `renderer` global lets your script control a wide range of visual behaviors: whether fire, vehicle, crosshair, and HUD elements are drawn; the camera's position, rotation, pivot, and matrix; field of view; shadow radius; post-processing effects; arm and arrow visibility; and custom fire textures. Most setters return the `RendererAPI` instance so calls can be chained.
+
+---
+
+## Boolean render flags
+
+The following public fields can be read and set directly as properties, or through their corresponding getter/setter methods.
+
+| Field | Default | Description |
+|---|---|---|
+| `renderFire` | `true` | Whether the fire overlay renders when the player is on fire. |
+| `renderVehicle` | `true` | Whether the vehicle/mount model renders. |
+| `renderCrosshair` | `true` | Whether the crosshair renders. |
+| `forcePaperdoll` | `false` | Forces the paperdoll preview to display. |
+| `renderHUD` | `true` | Whether the HUD renders. |
+
+```lua
+renderer.renderFire = false
+renderer.forcePaperdoll = true
+```
+
+---
+
+## shouldRenderFire / setRenderFire
+
+Gets or sets whether the fire overlay is rendered when the player is on fire.
+
+<ParamField path="body.renderFire" type="boolean">
+  `true` to show fire overlay, `false` to suppress it.
+</ParamField>
+
+<ResponseField name="return (getter)" type="boolean">
+  Current fire render state.
+</ResponseField>
+
+<ResponseField name="return (setter)" type="RendererAPI">
+  Returns `RendererAPI` for chaining.
+</ResponseField>
+
+```lua
+renderer:setRenderFire(false)
+print(renderer:shouldRenderFire()) -- false
+```
+
+---
+
+## shouldRenderVehicle / setRenderVehicle
+
+Gets or sets whether the mounted vehicle is rendered.
+
+<ParamField path="body.renderVehicle" type="boolean">
+  `true` to render the vehicle, `false` to hide it.
+</ParamField>
+
+<ResponseField name="return (getter)" type="boolean">
+  Current vehicle render state.
+</ResponseField>
+
+<ResponseField name="return (setter)" type="RendererAPI">
+  Returns `RendererAPI` for chaining.
+</ResponseField>
+
+```lua
+renderer:setRenderVehicle(false)
+```
+
+---
+
+## shouldRenderCrosshair / setRenderCrosshair
+
+Gets or sets whether the crosshair is rendered.
+
+<ParamField path="body.renderCrosshair" type="boolean">
+  `true` to render the crosshair, `false` to hide it.
+</ParamField>
+
+<ResponseField name="return (getter)" type="boolean">
+  Current crosshair render state.
+</ResponseField>
+
+<ResponseField name="return (setter)" type="RendererAPI">
+  Returns `RendererAPI` for chaining.
+</ResponseField>
+
+```lua
+renderer:setRenderCrosshair(false)
+```
+
+---
+
+## shouldForcePaperdoll / setForcePaperdoll
+
+Gets or sets whether the paperdoll is forced to display.
+
+<ParamField path="body.forcePaperdoll" type="boolean">
+  `true` to force the paperdoll on screen.
+</ParamField>
+
+<ResponseField name="return (getter)" type="boolean">
+  Current paperdoll force state.
+</ResponseField>
+
+<ResponseField name="return (setter)" type="RendererAPI">
+  Returns `RendererAPI` for chaining.
+</ResponseField>
+
+```lua
+renderer:setForcePaperdoll(true)
+```
+
+---
+
+## shouldRenderHUD / setRenderHUD
+
+Gets or sets whether the HUD is rendered.
+
+<ParamField path="body.renderHUD" type="boolean">
+  `true` to render the HUD, `false` to suppress it.
+</ParamField>
+
+<ResponseField name="return (getter)" type="boolean">
+  Current HUD render state.
+</ResponseField>
+
+<ResponseField name="return (setter)" type="RendererAPI">
+  Returns `RendererAPI` for chaining.
+</ResponseField>
+
+```lua
+renderer:setRenderHUD(false)
+```
+
+---
+
+## isUpsideDown / setUpsideDown
+
+Gets or sets whether the avatar is rendered upside down.
+
+<ParamField path="body.upsideDown" type="boolean | nil">
+  `true` to flip the avatar. Pass `nil` to reset to the default orientation.
+</ParamField>
+
+<ResponseField name="return (getter)" type="boolean">
+  `true` if currently upside down.
+</ResponseField>
+
+<ResponseField name="return (setter)" type="RendererAPI">
+  Returns `RendererAPI` for chaining.
+</ResponseField>
+
+```lua
+renderer:setUpsideDown(true)
+```
+
+---
+
+## getShadowRadius / setShadowRadius
+
+Gets or sets the radius of the shadow rendered beneath the avatar. Clamped to the range 0–12. Pass `nil` to reset to the default.
+
+<ParamField path="body.radius" type="number | nil">
+  Shadow radius in blocks (0–12). `nil` resets to default.
+</ParamField>
+
+<ResponseField name="return (getter)" type="number">
+  Current shadow radius (defaults to `0.5` if not set).
+</ResponseField>
+
+<ResponseField name="return (setter)" type="RendererAPI">
+  Returns `RendererAPI` for chaining.
+</ResponseField>
+
+```lua
+renderer:setShadowRadius(2.0)
+print(renderer:getShadowRadius()) -- 2.0
+```
+
+---
+
+## isFirstPerson
+
+Returns whether the local player is currently in first-person view and is the camera entity.
+
+<ResponseField name="return" type="boolean">
+  `true` if the avatar's owner is the current camera entity and in first-person mode.
+</ResponseField>
+
+```lua
+if renderer:isFirstPerson() then
+  -- hide head in first person
+  models.Head:setVisible(false)
+end
+```
+
+---
+
+## isCameraBackwards
+
+Returns whether the camera is currently in the mirrored/backwards third-person view (toggled with F5).
+
+<ResponseField name="return" type="boolean">
+  `true` if the camera is in mirrored view.
+</ResponseField>
+
+```lua
+if renderer:isCameraBackwards() then
+  print("Looking at your own face")
+end
+```
+
+---
+
+## getCameraPos / setCameraPos
+
+Gets or sets an override for the camera position offset. Accepts a `Vector3` or three separate numbers. Pass `nil` (or no arguments) to clear the override.
+
+<ParamField path="body.pos" type="Vector3">
+  Camera position as a `Vector3`. Alternatively, pass `x`, `y`, `z` as separate numbers.
+</ParamField>
+
+<ResponseField name="return (getter)" type="Vector3 | nil">
+  Current camera position override, or `nil` if not set.
+</ResponseField>
+
+<ResponseField name="return (setter)" type="RendererAPI">
+  Returns `RendererAPI` for chaining.
+</ResponseField>
+
+```lua
+renderer:setCameraPos(0, 1, 0)
+-- or
+renderer:setCameraPos(vec(0, 1, 0))
+-- clear override
+renderer:setCameraPos(nil)
+```
+
+---
+
+## getCameraPivot / setCameraPivot
+
+Gets or sets an absolute camera pivot override. The pivot is the point the camera orbits around in third-person view.
+
+<ParamField path="body.pivot" type="Vector3">
+  Pivot position as a `Vector3` or three separate numbers.
+</ParamField>
+
+<ResponseField name="return (getter)" type="Vector3 | nil">
+  Current pivot override, or `nil` if not set.
+</ResponseField>
+
+<ResponseField name="return (setter)" type="RendererAPI">
+  Returns `RendererAPI` for chaining.
+</ResponseField>
+
+```lua
+renderer:setCameraPivot(0, 1.5, 0)
+```
+
+---
+
+## getCameraOffsetPivot / setOffsetCameraPivot
+
+Gets or sets a relative offset applied on top of the default camera pivot.
+
+<ParamField path="body.pivot" type="Vector3">
+  Offset pivot as a `Vector3` or three separate numbers.
+</ParamField>
+
+<ResponseField name="return (getter)" type="Vector3 | nil">
+  Current offset pivot, or `nil` if not set.
+</ResponseField>
+
+<ResponseField name="return (setter)" type="RendererAPI">
+  Returns `RendererAPI` for chaining.
+</ResponseField>
+
+```lua
+renderer:setOffsetCameraPivot(0, 0.2, 0)
+```
+
+---
+
+## getCameraRot / setCameraRot
+
+Gets or sets an absolute rotation override for the camera in degrees (X, Y, Z Euler angles). Replaces the player's look direction.
+
+<ParamField path="body.rot" type="Vector3">
+  Rotation in degrees as a `Vector3` or three separate numbers.
+</ParamField>
+
+<ResponseField name="return (getter)" type="Vector3 | nil">
+  Current camera rotation override, or `nil` if not set.
+</ResponseField>
+
+<ResponseField name="return (setter)" type="RendererAPI">
+  Returns `RendererAPI` for chaining.
+</ResponseField>
+
+```lua
+renderer:setCameraRot(0, 90, 0)
+```
+
+---
+
+## getCameraOffsetRot / setOffsetCameraRot
+
+Gets or sets a rotation offset added on top of the player's natural camera rotation.
+
+<ParamField path="body.rot" type="Vector3">
+  Rotation offset in degrees as a `Vector3` or three separate numbers.
+</ParamField>
+
+<ResponseField name="return (getter)" type="Vector3 | nil">
+  Current rotation offset, or `nil` if not set.
+</ResponseField>
+
+<ResponseField name="return (setter)" type="RendererAPI">
+  Returns `RendererAPI` for chaining.
+</ResponseField>
+
+```lua
+renderer:setOffsetCameraRot(0, 45, 0)
+```
+
+---
+
+## getCameraMatrix / setCameraMatrix
+
+Gets or sets a 4×4 matrix that overrides the entire camera transformation. Advanced use; overrides position and rotation overrides.
+
+<ParamField path="body.matrix" type="Matrix4 | nil">
+  A `FiguraMat4` camera matrix. Pass `nil` to clear the override.
+</ParamField>
+
+<ResponseField name="return (getter)" type="Matrix4 | nil">
+  Current camera matrix override, or `nil` if not set.
+</ResponseField>
+
+<ResponseField name="return (setter)" type="RendererAPI">
+  Returns `RendererAPI` for chaining.
+</ResponseField>
+
+```lua
+renderer:setCameraMatrix(matrices.mat4())
+```
+
+---
+
+## getCameraNormal / setCameraNormal
+
+Gets or sets the 3×3 normal matrix used alongside the camera matrix.
+
+<ParamField path="body.matrix" type="Matrix3 | nil">
+  A `FiguraMat3` normal matrix. Pass `nil` to clear.
+</ParamField>
+
+<ResponseField name="return (getter)" type="Matrix3 | nil">
+  Current normal matrix override, or `nil` if not set.
+</ResponseField>
+
+<ResponseField name="return (setter)" type="RendererAPI">
+  Returns `RendererAPI` for chaining.
+</ResponseField>
+
+```lua
+renderer:setCameraNormal(matrices.mat3())
+```
+
+---
+
+## setPostEffect
+
+Applies a fullscreen post-processing shader effect by name. The effect must be a valid Minecraft shader located in `shaders/post/`. Pass `nil` to remove the current effect.
+
+<ParamField path="body.effect" type="string | nil">
+  Shader name without path or extension, e.g. `"blur"`, `"creeper"`. Pass `nil` to clear.
+</ParamField>
+
+<ResponseField name="return" type="RendererAPI">
+  Returns `RendererAPI` for chaining.
+</ResponseField>
+
+```lua
+renderer:setPostEffect("blur")
+-- later, remove it
+renderer:setPostEffect(nil)
+```
+
+<Warning>
+  Throws a Lua error if the specified shader does not exist in the active resource pack.
+</Warning>
+
+---
+
+## getFOV / setFOV
+
+Gets or sets an override for the player's field of view. Pass `nil` to clear the override and restore the player's configured FOV.
+
+<ParamField path="body.fov" type="number | nil">
+  FOV value in degrees. Pass `nil` to reset to default.
+</ParamField>
+
+<ResponseField name="return (getter)" type="number | nil">
+  Current FOV override, or `nil` if not set.
+</ResponseField>
+
+<ResponseField name="return (setter)" type="RendererAPI">
+  Returns `RendererAPI` for chaining.
+</ResponseField>
+
+```lua
+renderer:setFOV(90)
+print(renderer:getFOV()) -- 90
+-- reset
+renderer:setFOV(nil)
+```
+
+---
+
+## getCrosshairOffset / setCrosshairOffset
+
+Gets or sets a pixel offset applied to the crosshair position. Accepts a `Vector2` or two separate integers.
+
+<ParamField path="body.vec" type="Vector2">
+  Crosshair offset as a `Vector2` or two separate integers (x, y). Pass `nil` to clear.
+</ParamField>
+
+<ResponseField name="return (getter)" type="Vector2 | nil">
+  Current crosshair offset, or `nil` if not set.
+</ResponseField>
+
+<ResponseField name="return (setter)" type="RendererAPI">
+  Returns `RendererAPI` for chaining.
+</ResponseField>
+
+```lua
+renderer:setCrosshairOffset(10, -5)
+```
+
+---
+
+## getOutlineColor / setOutlineColor
+
+Gets or sets the color of the entity selection outline rendered around the avatar. Accepts a `Vector3` (RGB, 0–1) or three separate numbers.
+
+<ParamField path="body.rgb" type="Vector3">
+  RGB color as a `Vector3` or three separate numbers (0–1 range). Pass `nil` to clear.
+</ParamField>
+
+<ResponseField name="return (getter)" type="Vector3 | nil">
+  Current outline color, or `nil` if not set.
+</ResponseField>
+
+<ResponseField name="return (setter)" type="RendererAPI">
+  Returns `RendererAPI` for chaining.
+</ResponseField>
+
+```lua
+renderer:setOutlineColor(1, 0, 0) -- red outline
+```
+
+---
+
+## getPrimaryFireTexture / setPrimaryFireTexture
+
+Gets or sets the texture used for the primary (inner) fire overlay layer. The texture ID follows Minecraft's resource location format.
+
+<ParamField path="body.id" type="string | nil">
+  Resource location string for the texture, e.g. `"minecraft:block/fire_0"`. Pass `nil` to restore the default.
+</ParamField>
+
+<ResponseField name="return (getter)" type="string">
+  Current primary fire texture path, or an empty string if using the default.
+</ResponseField>
+
+<ResponseField name="return (setter)" type="RendererAPI">
+  Returns `RendererAPI` for chaining.
+</ResponseField>
+
+```lua
+renderer:setPrimaryFireTexture("minecraft:block/soul_fire_0")
+```
+
+---
+
+## getSecondaryFireTexture / setSecondaryFireTexture
+
+Gets or sets the texture used for the secondary (outer) fire overlay layer.
+
+<ParamField path="body.id" type="string | nil">
+  Resource location string for the texture. Pass `nil` to restore the default.
+</ParamField>
+
+<ResponseField name="return (getter)" type="string">
+  Current secondary fire texture path, or an empty string if using the default.
+</ResponseField>
+
+<ResponseField name="return (setter)" type="RendererAPI">
+  Returns `RendererAPI` for chaining.
+</ResponseField>
+
+```lua
+renderer:setSecondaryFireTexture("minecraft:block/soul_fire_1")
+```
+
+---
+
+## getRenderLeftArm / setRenderLeftArm
+
+Gets or sets whether the player's left arm is rendered in first-person view.
+
+<ParamField path="body.bool" type="boolean | nil">
+  `true` to force the left arm visible, `false` to hide it, `nil` to use the default.
+</ParamField>
+
+<ResponseField name="return (getter)" type="boolean | nil">
+  Current left arm visibility override.
+</ResponseField>
+
+<ResponseField name="return (setter)" type="RendererAPI">
+  Returns `RendererAPI` for chaining.
+</ResponseField>
+
+```lua
+renderer:setRenderLeftArm(false)
+print(renderer:getRenderLeftArm()) -- false
+```
+
+---
+
+## getRenderRightArm / setRenderRightArm
+
+Gets or sets whether the player's right arm is rendered in first-person view.
+
+<ParamField path="body.bool" type="boolean | nil">
+  `true` to force the right arm visible, `false` to hide it, `nil` to use the default.
+</ParamField>
+
+<ResponseField name="return (getter)" type="boolean | nil">
+  Current right arm visibility override.
+</ResponseField>
+
+<ResponseField name="return (setter)" type="RendererAPI">
+  Returns `RendererAPI` for chaining.
+</ResponseField>
+
+```lua
+renderer:setRenderRightArm(true)
+```
+
+---
+
+## setRenderArrows
+
+Sets whether arrows shot by the player should use Figura's custom arrow rendering hook.
+
+<ParamField path="body.bool" type="boolean | nil">
+  `true` to enable custom arrow rendering, `nil` to reset to default.
+</ParamField>
+
+<ResponseField name="return" type="RendererAPI">
+  Returns `RendererAPI` for chaining.
+</ResponseField>
+
+```lua
+renderer:setRenderArrows(true)
+```
+
+---
+
+## getEyeOffset / setEyeOffset
+
+Gets or sets an offset added to the player's eye position used for camera and ray calculations.
+
+<ParamField path="body.pos" type="Vector3">
+  Offset as a `Vector3` or three separate numbers. Pass `nil` to clear.
+</ParamField>
+
+<ResponseField name="return (getter)" type="Vector3 | nil">
+  Current eye offset, or `nil` if not set.
+</ResponseField>
+
+<ResponseField name="return (setter)" type="RendererAPI">
+  Returns `RendererAPI` for chaining.
+</ResponseField>
+
+```lua
+renderer:setEyeOffset(0, 0.5, 0)
+```
+
+---
+
+## getBlockOutlineColor / setBlockOutlineColor
+
+Gets or sets the color of the block selection outline. Accepts `Vector3` (RGB), `Vector4` (RGBA), or four separate numbers.
+
+<ParamField path="body.r" type="Vector3 | Vector4 | number">
+  Red component or a `Vector3`/`Vector4` with RGB or RGBA values. Pass `nil` to clear.
+</ParamField>
+
+<ParamField path="body.g" type="number">
+  Green component (0–1). Used when passing individual numbers.
+</ParamField>
+
+<ParamField path="body.b" type="number">
+  Blue component (0–1). Used when passing individual numbers.
+</ParamField>
+
+<ParamField path="body.a" type="number">
+  Alpha component (0–1). Defaults to `0.4` if not provided.
+</ParamField>
+
+<ResponseField name="return (getter)" type="Vector4 | nil">
+  Current block outline color as RGBA, or `nil` if not set.
+</ResponseField>
+
+<ResponseField name="return (setter)" type="RendererAPI">
+  Returns `RendererAPI` for chaining.
+</ResponseField>
+
+```lua
+renderer:setBlockOutlineColor(1, 0, 0, 0.8) -- red, 80% opacity
+```
+
+---
+
+## getRootRotationAllowed / setRootRotationAllowed
+
+Gets or sets whether the avatar's root model group is allowed to rotate with the player's body. Defaults to `true`.
+
+<ParamField path="body.bool" type="boolean | nil">
+  `false` to lock the root model against body rotation. `nil` resets to the default (`true`).
+</ParamField>
+
+<ResponseField name="return (getter)" type="boolean">
+  `true` if root rotation is currently allowed.
+</ResponseField>
+
+<ResponseField name="return (setter)" type="RendererAPI">
+  Returns `RendererAPI` for chaining.
+</ResponseField>
+
+```lua
+renderer:setRootRotationAllowed(false)
+print(renderer:getRootRotationAllowed()) -- false
+```

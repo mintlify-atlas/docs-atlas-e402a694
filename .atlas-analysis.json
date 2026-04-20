@@ -1,28 +1,11 @@
 {
-  "$schema": "https://mintlify.com/docs.json",
-  "name": "Figura",
+  "projectType": "general",
+  "projectName": "Figura",
+  "projectDescription": "A Minecraft Java client mod that lets players extensively customize their character model using Blockbench and an optional Lua scripting API.",
   "theme": "palm",
-  "colors": {
-    "primary": "#04ac5c",
-    "light": "#1fd56c",
-    "dark": "#17221f"
-  },
-  "favicon": "https://media.brand.dev/44aa457f-7f4f-43bc-a5ce-fcd130bc077a.jpg",
-  "logo": {
-    "light": "https://media.brand.dev/89bfa130-e54a-4e07-b162-3771fc54ff4d.webp",
-    "dark": "https://media.brand.dev/89bfa130-e54a-4e07-b162-3771fc54ff4d.webp"
-  },
-  "navbar": {
-    "primary": {
-      "type": "github",
-      "href": "https://github.com/FiguraMC/Figura"
-    }
-  },
-  "footer": {
-    "socials": {
-      "github": "https://github.com/FiguraMC/Figura"
-    }
-  },
+  "primaryColor": "#04ac5c",
+  "lightColor": "#1fd56c",
+  "darkColor": "#17221f",
   "navigation": {
     "tabs": [
       {
@@ -114,5 +97,40 @@
         ]
       }
     ]
-  }
+  },
+  "keyFeatures": [
+    "Custom player model creation using Blockbench",
+    "Optional Lua scripting API for dynamic avatar behavior",
+    "Server-side visibility without requiring server mods",
+    "Robust permission and trust system for safety",
+    "Action wheel for in-game interactive controls",
+    "Ping system for syncing events across all players",
+    "Emissive textures and advanced rendering options",
+    "Support for Fabric, Forge, Quilt, and NeoForge"
+  ],
+  "publicApiSurface": [
+    "events.TICK",
+    "events.RENDER",
+    "events.ENTITY_INIT",
+    "events.KEY_PRESS",
+    "events.CHAT_SEND_MESSAGE",
+    "events.MOUSE_PRESS",
+    "events.USE_ITEM",
+    "avatar.getNBT()",
+    "avatar.store(key, value)",
+    "pings.<name>(...)",
+    "animations.<model>.<name>:play()",
+    "vanilla_model.ALL:setVisible(bool)",
+    "vanilla_model.PLAYER:setVisible(bool)",
+    "vanilla_model.ARMOR:setVisible(bool)",
+    "action_wheel:newPage()",
+    "action_wheel:newAction()",
+    "renderer:setRenderType(type)",
+    "keybinds:newKeybind(name, key)",
+    "nameplate.ENTITY:setText(text)",
+    "sounds:playSound(id, pos, volume, pitch)",
+    "particles:addParticle(id, pos, vel)",
+    "world.getBiome(pos)",
+    "host:setUnlockCursor(bool)"
+  ]
 }

@@ -1,0 +1,202 @@
+---
+title: "Building a Figura radial action wheel in Lua"
+description: "The action_wheel API lets you build a radial menu visible only to the host player. Organise actions into pages and attach click, toggle, and scroll callbacks."
+---
+
+The action wheel is a radial menu that appears when the host player holds the action wheel key (default: **B**). It is built entirely from Lua using the `action_wheel` global. Only the host player sees and interacts with the wheel — viewers see no UI. Combine the action wheel with pings to propagate the results of host interactions to all viewers.
+
+<Note>
+The action wheel is only available to the host player. Calls to `action_wheel` APIs from a non-host client are silently no-ops.
+</Note>
+
+## Pages and actions
+
+The wheel is organised into **pages** and **actions**:
+
+- A **Page** (`wheel_page`) is a container that holds up to 8 actions per slot group.
+- An **Action** (`wheel_action`) is a single entry displayed in the wheel. It has a title, an optional item icon, an optional colour, and callbacks for left click, right click, toggle, and scroll.
+
+You must create at least one page and set it as the current page with `action_wheel:setPage()` before anything appears in the wheel.
+
+## Creating a page and adding actions
+
+<Steps>
+  <Step title="Create a page">
+    ```lua
+    local myPage = action_wheel:newPage()
+    ```
+
+    You can optionally give the page a title string. Named pages are stored internally and can be retrieved later by name:
+
+    ```lua
+    local myPage = action_wheel:newPage("Main")
+    ```
+  </Step>
+
+  <Step title="Set the active page">
+    ```lua
+    action_wheel:setPage(myPage)
+    -- or, if the page was created with a title:
+    action_wheel:setPage("Main")
+    ```
+  </Step>
+
+  <Step title="Add an action to the page">
+    Call `:newAction()` on the page. The action is automatically placed in the next available slot (slots 1–8). Chain setter methods to configure it:
+
+    ```lua
+    local myAction = myPage:newAction()
+        :title("Toggle Wings")
+        :item("minecraft:feather")
+        :onLeftClick(function()
+            -- called when the action is left-clicked
+            pings.toggleWings()
+        end)
+    ```
+  </Step>
+</Steps>
+
+## Action properties
+
+<AccordionGroup>
+  <Accordion title="title — display name">
+    Sets the text label shown when the player hovers over the action slot.
+
+    ```lua
+    myAction:title("Toggle Wings")
+    ```
+  </Accordion>
+
+  <Accordion title="item — icon item">
+    Sets an item to render as the action's icon using a Minecraft item ID.
+
+    ```lua
+    myAction:item("minecraft:feather")
+    myAction:item("minecraft:diamond_sword")
+    ```
+  </Accordion>
+
+  <Accordion title="color — background colour">
+    Sets the background colour of the action slot as an RGB vector or three numbers.
+
+    ```lua
+    myAction:color(1, 0.5, 0)          -- orange
+    myAction:color(vectors.vec3(0, 1, 0)) -- green
+    ```
+
+    The default toggle highlight colour is green `(0, 1, 0)` and the hover colour is white `(1, 1, 1)`.
+  </Accordion>
+
+  <Accordion title="toggled state">
+    Actions support a binary toggle state with separate title, item, and colour for each state. Use `:onToggle()` and `:onUntoggle()` to react to state changes, and `:toggled(bool)` to set the state programmatically.
+
+    ```lua
+    myAction
+        :title("Wings: OFF")
+        :toggleTitle("Wings: ON")
+        :onToggle(function()
+            pings.setWings(true)
+        end)
+        :onUntoggle(function()
+            pings.setWings(false)
+        end)
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Click and scroll callbacks
+
+Each action supports three interaction callbacks:
+
+| Callback | Method | When it fires |
+|---|---|---|
+| Left click | `:onLeftClick(fn)` | Player left-clicks the action slot |
+| Right click | `:onRightClick(fn)` | Player right-clicks the action slot |
+| Scroll | `:onScroll(fn)` | Player scrolls while hovering over the slot; receives `delta` |
+
+```lua
+myPage:newAction()
+    :title("Volume")
+    :item("minecraft:note_block")
+    :onLeftClick(function()
+        pings.adjustVolume(1)
+    end)
+    :onRightClick(function()
+        pings.adjustVolume(-1)
+    end)
+    :onScroll(function(delta)
+        pings.adjustVolume(delta)
+    end)
+```
+
+## Multiple pages
+
+You can create several pages and navigate between them by calling `action_wheel:setPage()` from within an action's callback:
+
+```lua
+local mainPage = action_wheel:newPage("Main")
+local settingsPage = action_wheel:newPage("Settings")
+
+action_wheel:setPage(mainPage)
+
+mainPage:newAction()
+    :title("Settings")
+    :item("minecraft:comparator")
+    :onLeftClick(function()
+        action_wheel:setPage(settingsPage)
+    end)
+
+settingsPage:newAction()
+    :title("Back")
+    :item("minecraft:arrow")
+    :onLeftClick(function()
+        action_wheel:setPage(mainPage)
+    end)
+```
+
+## Slot positions
+
+By default, `:newAction()` fills slots sequentially starting from slot 1. Pass an index to place an action in a specific slot (1–8):
+
+```lua
+myPage:newAction(1):title("Slot 1 action")
+myPage:newAction(5):title("Slot 5 action")
+```
+
+Retrieve an action by slot index with `:getAction(index)`, or replace a slot with `:setAction(index, action)`.
+
+## Checking whether the wheel is open
+
+```lua
+if action_wheel:isEnabled() then
+    -- the wheel is currently visible
+end
+```
+
+Use `action_wheel:getSelected()` to get the currently highlighted slot index (1–8), and `action_wheel:getSelectedAction()` to get the `Action` object in that slot.
+
+## Complete example
+
+```lua
+local myPage = action_wheel:newPage()
+action_wheel:setPage(myPage)
+
+local isVisible = true
+
+function pings.toggleWings(state)
+    isVisible = state
+    models.Wings:setVisible(isVisible)
+end
+
+myPage:newAction()
+    :title("Toggle Wings")
+    :item("minecraft:feather")
+    :onLeftClick(function()
+        isVisible = not isVisible
+        pings.toggleWings(isVisible)
+    end)
+```
+
+<Tip>
+Always drive visible model changes through a ping rather than directly inside the action callback. The callback only runs on the host; the ping ensures all viewers update their rendering too.
+</Tip>

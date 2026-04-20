@@ -1,0 +1,130 @@
+---
+title: "How Figura's avatar permission system works"
+description: "Figura's permission system lets viewers control how much CPU, memory, and capability each avatar is allowed — protecting against resource-heavy avatars."
+---
+
+Figura gives every viewer full control over what other players' avatars are allowed to do on their client. Rather than trusting avatars unconditionally, the mod exposes a set of named permissions — each with a configurable limit — that cap how many resources an avatar can consume and which features it can access. These limits are enforced locally, so different players can grant different levels of trust to the same avatar.
+
+## Permission categories
+
+Permissions fall into two types: **sliders** (numeric limits) and **toggles** (boolean on/off). The values below reflect the defaults defined in `Permissions.java`.
+
+### Numeric limits (sliders)
+
+<AccordionGroup>
+  <Accordion title="COMPLEXITY — model part count">
+    Caps the total number of model parts Figura will render for an avatar. Higher values allow more elaborate geometry.
+
+    Default range: `0` (blocked) to `Integer.MAX_VALUE` (max trust). Mid-tier default is `512`.
+  </Accordion>
+  <Accordion title="PARTICLES — particles per tick">
+    Limits how many particles an avatar's Lua script can spawn each game tick.
+
+    Default range: `0` to `∞`. Mid-tier default is `20`.
+  </Accordion>
+  <Accordion title="SOUNDS — sounds per tick">
+    Limits how many sounds an avatar can play each tick via the Lua API.
+
+    Default range: `0` to `∞`. Mid-tier default is `5`.
+  </Accordion>
+  <Accordion title="VOLUME — maximum volume (0–100)">
+    Sets the maximum volume level (0–100) that avatar sounds can reach. Unlike other numeric permissions, volume never unlocks to infinity; the maximum is always capped at `100`.
+  </Accordion>
+  <Accordion title="BB_ANIMATIONS — Blockbench animation count">
+    Caps how many Blockbench animations an avatar can define.
+
+    Default range: `0` to `∞`. Mid-tier default is `32`.
+  </Accordion>
+  <Accordion title="ANIMATION_INST — animation instruction count">
+    Limits the number of Lua instructions that animation-related scripts may execute per tick.
+
+    Default range: `0` to `∞`. Mid-tier default is `2048`.
+  </Accordion>
+  <Accordion title="TEXTURE_SIZE — maximum texture dimensions">
+    Sets the maximum pixel dimension (width or height) of textures the avatar may use.
+
+    Default range: `0`px (blocked) to `2048`px (max trust). A minimum slider floor of `64`px is enforced by the UI.
+  </Accordion>
+  <Accordion title="BUFFER_SIZE / BUFFERS_COUNT — render buffer limits">
+    `BUFFER_SIZE` caps the byte size of custom render buffers; `BUFFERS_COUNT` caps how many separate buffers an avatar can create. These bound GPU memory usage for avatars that use custom geometry rendering.
+  </Accordion>
+  <Accordion title="Script instruction budgets">
+    Several additional limits constrain Lua execution time across different phases:
+
+    - `INIT_INST` — instructions during avatar initialisation
+    - `WORLD_TICK_INST` — instructions during the world tick event
+    - `TICK_INST` — instructions during the per-avatar tick event
+    - `WORLD_RENDER_INST` — instructions during the world render event
+    - `RENDER_INST` — instructions during the per-avatar render event
+  </Accordion>
+</AccordionGroup>
+
+### Boolean capabilities (toggles)
+
+<CardGroup cols={2}>
+  <Card title="VANILLA_MODEL_EDIT" icon="eye">
+    Allows the avatar's script to show or hide parts of the player's vanilla model (body, armor, held items, etc.).
+  </Card>
+  <Card title="NAMEPLATE_EDIT" icon="tag">
+    Allows the avatar to modify the text, position, or visibility of the player's nameplate.
+  </Card>
+  <Card title="OFFSCREEN_RENDERING" icon="display">
+    Allows the avatar to schedule render tasks that execute even when the player is off-screen, enabling effects like minimap icons or background computations.
+  </Card>
+  <Card title="CUSTOM_SOUNDS" icon="music">
+    Allows the avatar to play custom sound files bundled with the avatar rather than only vanilla Minecraft sounds.
+  </Card>
+  <Card title="CANCEL_SOUNDS" icon="volume-x">
+    Allows the avatar's script to suppress vanilla sound events from playing on the viewer's client.
+  </Card>
+  <Card title="CUSTOM_SKULL" icon="skull">
+    Allows the avatar to render a custom model in place of a player skull block.
+  </Card>
+  <Card title="NETWORKING" icon="globe">
+    Allows the avatar's Lua script to make outbound HTTP requests. Disabled at all but the highest trust tiers.
+  </Card>
+  <Card title="CANCEL_DAMAGE" icon="shield-off">
+    Allows the avatar to suppress damage number indicators from appearing on the viewer's screen.
+  </Card>
+</CardGroup>
+
+## Trust levels
+
+Figura groups permission values into five named **categories**. Each category pre-sets all slider limits and toggle states to a sensible baseline, so you rarely need to adjust individual permissions.
+
+| Category | Who it applies to | Character |
+|---|---|---|
+| **BLOCKED** | Players you want to silence completely | All numeric limits at `0`, all toggles off |
+| **LOW** | Default for unknown players | Conservative resource limits |
+| **DEFAULT** | The standard starting tier | Moderate limits suitable for most avatars |
+| **HIGH** | Trusted community members | Generous limits |
+| **MAX** | Maximum trust (also applied to your own local avatar) | No artificial caps |
+
+<Note>
+  Your own avatar always runs at the **MAX** category on your own client. The trust you assign to others has no effect on how your avatar appears to yourself.
+</Note>
+
+## How to change trust for a player
+
+<Steps>
+  <Step title="Open the Figura menu">
+    Press the Figura keybind (default varies by install) to open the Figura GUI.
+  </Step>
+  <Step title="Navigate to the player list">
+    Select the **Permissions** or **Player List** tab. You will see nearby players and their current trust category.
+  </Step>
+  <Step title="Adjust the trust level">
+    Click a player's entry and use the trust slider or arrow buttons to move them between BLOCKED, LOW, DEFAULT, HIGH, and MAX.
+  </Step>
+  <Step title="Changes take effect immediately">
+    Figura re-evaluates limits in real time. No restart is required.
+  </Step>
+</Steps>
+
+<Tip>
+  Trust settings are saved per-player on your local machine. You can pre-configure trust for someone even before they join the server.
+</Tip>
+
+## Per-viewer enforcement
+
+Every limit is enforced on your own client only. If you grant a player HIGH trust and another viewer keeps them at BLOCKED, both of you see the avatar rendered according to your own individual settings. Avatar authors have no way to override or bypass a viewer's trust configuration.

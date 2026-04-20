@@ -1,0 +1,130 @@
+---
+title: "Install Figura on Fabric, Forge, Quilt, or NeoForge"
+description: "Download and install the Figura client mod for Minecraft Java Edition on your preferred mod loader, then launch the game to connect to the Figura backend."
+---
+
+Figura is a client-side Minecraft Java Edition mod. Install it the same way you install any other mod for your loader — download the jar file and drop it into your `mods` folder. There is no server-side component to install.
+
+## Prerequisites
+
+- **Minecraft Java Edition** — a valid, premium Mojang account is required. Non-premium (cracked) accounts cannot use Figura.
+- **A mod loader** installed for the Minecraft version you want to use — Fabric, Forge, Quilt, or NeoForge.
+
+<Note>
+  The current Figura release targets **Minecraft 1.20.1**. Always download the build that matches your Minecraft version.
+</Note>
+
+## Download Figura
+
+Get the Figura mod jar from any of these sources:
+
+| Source | Best for |
+|--------|----------|
+| [Modrinth](https://modrinth.com/mod/figura) | Fabric, Quilt, NeoForge |
+| [CurseForge](https://curseforge.com/minecraft/mc-mods/figura) | Fabric, Forge |
+| [GitHub releases](https://github.com/FiguraMC/Figura/releases/latest) | All loaders — direct download |
+
+## Installation steps
+
+<Tabs>
+  <Tab title="Fabric">
+    <Steps>
+      <Step title="Install the Fabric loader">
+        Download and run the [Fabric installer](https://fabricmc.net/use/installer/). Select your Minecraft version and click **Install**.
+      </Step>
+      <Step title="Install Fabric API">
+        Download [Fabric API](https://modrinth.com/mod/fabric-api) for your Minecraft version and place the jar in your `mods` folder. Figura requires it.
+      </Step>
+      <Step title="Download Figura">
+        Go to [Modrinth](https://modrinth.com/mod/figura) or [CurseForge](https://curseforge.com/minecraft/mc-mods/figura), select the Fabric version matching your Minecraft version, and download the jar.
+      </Step>
+      <Step title="Place the jar in your mods folder">
+        Copy the Figura jar into `.minecraft/mods/`. Create the folder if it does not exist.
+      </Step>
+      <Step title="Launch the game">
+        Open the Minecraft Launcher, select the **Fabric** profile, and click **Play**. Figura connects to the backend server automatically on startup.
+      </Step>
+    </Steps>
+  </Tab>
+  <Tab title="Forge">
+    <Steps>
+      <Step title="Install the Forge loader">
+        Download the Forge installer from [files.minecraftforge.net](https://files.minecraftforge.net/) for your Minecraft version, run it, and select **Install client**.
+      </Step>
+      <Step title="Download Figura">
+        Go to [CurseForge](https://curseforge.com/minecraft/mc-mods/figura) or [GitHub releases](https://github.com/FiguraMC/Figura/releases/latest), select the Forge build matching your Minecraft version, and download the jar.
+      </Step>
+      <Step title="Place the jar in your mods folder">
+        Copy the Figura jar into `.minecraft/mods/`. Create the folder if it does not exist.
+      </Step>
+      <Step title="Launch the game">
+        Open the Minecraft Launcher, select the **Forge** profile, and click **Play**. Figura connects to the backend server automatically on startup.
+      </Step>
+    </Steps>
+  </Tab>
+  <Tab title="Quilt">
+    <Steps>
+      <Step title="Install the Quilt loader">
+        Download and run the [Quilt installer](https://quiltmc.org/en/install/). Select your Minecraft version and click **Install**.
+      </Step>
+      <Step title="Install Quilted Fabric API">
+        Download [Quilted Fabric API (QFAPI)](https://modrinth.com/mod/qsl) for your Minecraft version and place it in your `mods` folder.
+      </Step>
+      <Step title="Download Figura">
+        Download the **Fabric** build of Figura from [Modrinth](https://modrinth.com/mod/figura) — Fabric jars run on Quilt.
+      </Step>
+      <Step title="Place the jar in your mods folder">
+        Copy the Figura jar into `.minecraft/mods/`.
+      </Step>
+      <Step title="Launch the game">
+        Open the Minecraft Launcher, select the **Quilt** profile, and click **Play**.
+      </Step>
+    </Steps>
+  </Tab>
+  <Tab title="NeoForge">
+    <Steps>
+      <Step title="Install the NeoForge loader">
+        Download the NeoForge installer from [neoforged.net](https://neoforged.net/), run it, and select **Install client**.
+      </Step>
+      <Step title="Download Figura">
+        Go to [GitHub releases](https://github.com/FiguraMC/Figura/releases/latest), select the NeoForge build matching your Minecraft version, and download the jar.
+      </Step>
+      <Step title="Place the jar in your mods folder">
+        Copy the Figura jar into `.minecraft/mods/`. Create the folder if it does not exist.
+      </Step>
+      <Step title="Launch the game">
+        Open the Minecraft Launcher, select the **NeoForge** profile, and click **Play**.
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+## After launching
+
+When you start the game, Figura automatically connects to the Figura backend server. You do not need to configure a server address. Once connected, you can open the Figura menu (default key: **`**) to browse and equip avatars.
+
+<Note>
+  Figura uses Mojang authentication to verify your account when connecting to the backend. Make sure you are playing in **online mode** with a valid Mojang session.
+</Note>
+
+## Compatibility notes
+
+<AccordionGroup>
+  <Accordion title="OptiFine">
+    Figura works with OptiFine, but due to OptiFine's closed-source nature, compatibility issues may arise. The recommended alternative is **Sodium + Iris** on Fabric or **Rubidium + Oculus** on Forge. See the full list of [OptiFine alternatives](https://lambdaurora.dev/optifine_alternatives/).
+  </Accordion>
+  <Accordion title="Cracked (non-premium) accounts">
+    Figura requires a valid, online Mojang account. Non-premium Minecraft accounts do not authenticate with Mojang, so they cannot upload or download Figura avatars. Offline-mode servers also do not provide working UUIDs, which means Figura cannot function in that environment either.
+  </Accordion>
+  <Accordion title="Other shader mods">
+    Figura's emissive textures work with Iris/Oculus shaders. Some shaders do not support the emissive render type natively; in that case, Figura falls back to a full-bright render mode. You can force the correct render type by using the `EYES` render type on your model in Blockbench.
+  </Accordion>
+</AccordionGroup>
+
+## Next step
+
+<CardGroup cols={1}>
+  <Card title="Create your first avatar" icon="person" href="/your-first-avatar">
+    Build and upload a custom avatar using Blockbench and the Figura in-game menu.
+  </Card>
+</CardGroup>

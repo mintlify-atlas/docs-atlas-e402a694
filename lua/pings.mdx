@@ -1,0 +1,125 @@
+---
+title: "Syncing avatar state across clients with pings"
+description: "Pings are Lua functions assigned to the pings table. Calling them from the host player sends the call and its arguments to every client viewing the avatar."
+---
+
+When the host player (the person wearing the avatar) calls a ping function, Figura serialises the call and its arguments and broadcasts it to every client that is currently rendering that avatar. Each viewer's game then executes the same function locally with the same arguments. This makes pings the correct tool for synchronising state changes — such as toggling a wing model, changing a colour, or reacting to an action wheel press — so that all viewers see the same result.
+
+<Note>
+Pings only travel outward from the host. If a viewer calls `pings.myPing()` in their own console or a script, nothing is sent — the call is silently discarded because `isHost` is `false` for that client.
+</Note>
+
+## Defining a ping
+
+Assign a function to a field on the `pings` table. The field name becomes the ping's identifier:
+
+```lua
+function pings.myPing(arg1, arg2)
+    -- this code runs for everyone viewing the avatar
+    print(arg1, arg2)
+end
+```
+
+You can also use the assignment form:
+
+```lua
+pings.myPing = function(arg1, arg2)
+    print(arg1, arg2)
+end
+```
+
+## Calling (triggering) a ping
+
+Call the ping like any ordinary Lua function from the host's script:
+
+```lua
+pings.myPing("hello", 42)
+```
+
+Figura intercepts the call, serialises `"hello"` and `42`, sends them over the network, and then executes `pings.myPing("hello", 42)` on every viewer's client (including the host, unless sync mode is active).
+
+## Supported argument types
+
+Pings support a limited set of serialisable Lua types as arguments:
+
+| Type | Notes |
+|---|---|
+| `boolean` | `true` / `false` |
+| `number` | Both integers and floats |
+| `string` | Arbitrary text |
+| `nil` | Treated as no value |
+| `table` | Flat tables of the above types; deeply nested or mixed-key tables may not survive serialisation |
+
+<Warning>
+Pings are **rate-limited** and **size-limited**. Sending large tables, long strings, or firing pings too frequently will cause packets to be dropped. Keep ping arguments small and calls infrequent — use them for discrete events, not continuous per-tick data.
+</Warning>
+
+## Example: syncing a toggle via a keybind
+
+This pattern is the most common use of pings: a keybind on the host triggers a ping, and the ping function runs the actual model change on all viewers.
+
+```lua
+local isVisible = true
+
+function pings.toggleVisibility(state)
+    isVisible = state
+    models.MyModel:setVisible(isVisible)
+end
+
+events.KEY_PRESS:register(function(key, action)
+    if key == 67 and action == 1 then -- C key, pressed
+        isVisible = not isVisible
+        pings.toggleVisibility(isVisible)
+    end
+end)
+```
+
+Separating the logic into a ping function (rather than putting it directly in the key press handler) ensures that all viewers update their model, not just the host.
+
+## Frequently asked questions
+
+<AccordionGroup>
+  <Accordion title="Can I return values from a ping?">
+    No. Ping return values are ignored. Pings are fire-and-forget — the host sends the call, viewers execute it, but nothing comes back.
+  </Accordion>
+
+  <Accordion title="Do pings work in single-player?">
+    Yes. In single-player, the host and the sole viewer are the same client, so the ping still executes on that client. The network serialisation still happens internally.
+  </Accordion>
+
+  <Accordion title="What happens if I exceed the rate limit?">
+    Figura's backend will drop packets that exceed the allowed send rate. The ping function will not execute on viewers for dropped packets. There is no error raised in Lua — packets are silently discarded. Design your avatar to call pings only when state actually changes, not every tick.
+  </Accordion>
+
+  <Accordion title="Can a viewer call a ping?">
+    No. The `PingFunction` implementation checks `isHost` before sending anything. A call made from a non-host client returns immediately without sending a packet or executing the function body.
+  </Accordion>
+
+  <Accordion title="Can I remove a ping definition?">
+    Yes. Assign `nil` to the field:
+    ```lua
+    pings.myPing = nil
+    ```
+    This removes the ping from Figura's internal map and it will no longer respond to incoming packets.
+  </Accordion>
+
+  <Accordion title="How do I sync action wheel presses?">
+    Define a ping for each action, then call it inside the action's `onLeftClick` callback:
+    ```lua
+    function pings.toggleWings(state)
+        models.Wings:setVisible(state)
+    end
+
+    local wingsVisible = false
+    local myPage = action_wheel:newPage()
+    action_wheel:setPage(myPage)
+
+    myPage:newAction()
+        :title("Toggle Wings")
+        :onLeftClick(function()
+            wingsVisible = not wingsVisible
+            pings.toggleWings(wingsVisible)
+        end)
+    ```
+  </Accordion>
+</AccordionGroup>

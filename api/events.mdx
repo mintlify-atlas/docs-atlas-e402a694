@@ -1,0 +1,533 @@
+---
+title: "EventsAPI — subscribable Figura game events"
+description: "The events global exposes subscribable game events. Register Lua functions to be called automatically when rendering, input, chat, and other moments occur."
+---
+
+The `events` global contains every subscribable event in Figura. Each field is a `LuaEvent` object with `register`, `remove`, `clear`, and `getRegisteredCount` methods. You can also use the shorthand assignment syntax to register a single anonymous function directly.
+
+## Registering a listener
+
+```lua
+-- Anonymous function (no name, cannot be removed by name)
+events.TICK:register(function()
+  print("tick!")
+end)
+
+-- Named function (can be removed later by name)
+events.TICK:register(function()
+  print("tick!")
+end, "myTickHandler")
+
+-- Shorthand assignment (registers without a name)
+events.TICK = function()
+  print("tick!")
+end
+```
+
+## Removing a listener
+
+```lua
+-- Remove by name
+events.TICK:remove("myTickHandler")
+
+-- Remove by function reference
+local fn = function() end
+events.TICK:register(fn)
+events.TICK:remove(fn)
+```
+
+## Clearing all listeners
+
+```lua
+events.TICK:clear()
+```
+
+---
+
+## LuaEvent methods
+
+Every event field is a `LuaEvent` object that exposes the following methods.
+
+### register
+
+Registers a function to be called when the event fires. Up to 1024 functions may be registered per event.
+
+<ParamField path="body.func" type="function" required>
+  The Lua function to register as a listener.
+</ParamField>
+
+<ParamField path="body.name" type="string">
+  Optional name for the listener. Named listeners can be removed by name later.
+</ParamField>
+
+<ResponseField name="return" type="LuaEvent">
+  Returns the event itself for chaining.
+</ResponseField>
+
+```lua
+events.RENDER:register(function(delta)
+  -- runs every render frame
+end, "myRenderHandler")
+```
+
+### remove
+
+Removes one or more registered listeners. Accepts either a name string or a direct function reference.
+
+<ParamField path="body.toRemove" type="string | function" required>
+  Either the name string passed to `register`, or the exact function reference to remove.
+</ParamField>
+
+<ResponseField name="return" type="integer">
+  Number of listeners successfully removed.
+</ResponseField>
+
+```lua
+local removed = events.TICK:remove("myTickHandler")
+print(removed .. " listener(s) removed")
+```
+
+### clear
+
+Removes all registered listeners from the event, including named and unnamed functions.
+
+```lua
+events.RENDER:clear()
+```
+
+### getRegisteredCount
+
+Returns the number of functions currently registered under a given name.
+
+<ParamField path="body.name" type="string" required>
+  The listener name to look up.
+</ParamField>
+
+<ResponseField name="return" type="integer">
+  Count of functions registered under that name.
+</ResponseField>
+
+```lua
+print(events.TICK:getRegisteredCount("myTickHandler"))
+```
+
+---
+
+## Event reference
+
+### ENTITY_INIT
+
+Fired once when the avatar's entity is first loaded and available. No arguments are passed. Use this event to perform setup that requires the entity to exist.
+
+```lua
+events.ENTITY_INIT:register(function()
+  print("Entity ready: " .. player:getName())
+end)
+```
+
+---
+
+### TICK
+
+Fired every game tick (20 times per second) on the client. No arguments are passed. Use this event for game-logic updates such as tracking health or updating state machines.
+
+```lua
+events.TICK:register(function()
+  -- runs 20 times per second
+end)
+```
+
+---
+
+### WORLD_TICK
+
+Fired every game tick when the client world is active. No arguments are passed. Similar to `TICK`, but specifically tied to world availability.
+
+```lua
+events.WORLD_TICK:register(function()
+  -- world-level tick logic
+end)
+```
+
+---
+
+### RENDER
+
+Fired at the start of each render frame, before the avatar is drawn. Receives the partial tick delta — a value between 0 and 1 representing how far between the last and next game tick the current frame falls.
+
+<ResponseField name="delta" type="number">
+  Partial tick delta (0–1). Use for smooth interpolation.
+</ResponseField>
+
+```lua
+events.RENDER:register(function(delta)
+  -- smooth per-frame logic
+end)
+```
+
+---
+
+### POST_RENDER
+
+Fired at the end of each render frame, after the avatar is drawn. Receives the same partial tick `delta` as `RENDER`.
+
+<ResponseField name="delta" type="number">
+  Partial tick delta (0–1).
+</ResponseField>
+
+```lua
+events.POST_RENDER:register(function(delta)
+  -- cleanup or post-processing per frame
+end)
+```
+
+---
+
+### PRE_RENDER
+
+Fired just before the main render pass. Receives the partial tick delta. Useful for setting up render state before `RENDER` fires.
+
+<ResponseField name="delta" type="number">
+  Partial tick delta (0–1).
+</ResponseField>
+
+```lua
+events.PRE_RENDER:register(function(delta)
+  -- pre-render setup
+end)
+```
+
+---
+
+### WORLD_RENDER
+
+Fired each frame during world rendering. Receives the partial tick delta. Use this event to position or update things tied to world-space rendering.
+
+<ResponseField name="delta" type="number">
+  Partial tick delta (0–1).
+</ResponseField>
+
+```lua
+events.WORLD_RENDER:register(function(delta)
+  -- world-space render logic
+end)
+```
+
+---
+
+### POST_WORLD_RENDER
+
+Fired after world rendering completes each frame. Receives the partial tick delta.
+
+<ResponseField name="delta" type="number">
+  Partial tick delta (0–1).
+</ResponseField>
+
+```lua
+events.POST_WORLD_RENDER:register(function(delta)
+  -- post world render logic
+end)
+```
+
+---
+
+### CHAT_SEND_MESSAGE
+
+Fired when the local player sends a chat message. This event is **piped**: the return value of each listener is passed as the input to the next. Return a modified string to change the message, or return the original string unchanged. Returning `nil` from any listener cancels the message.
+
+<ResponseField name="message" type="string">
+  The message text the player is sending.
+</ResponseField>
+
+```lua
+events.CHAT_SEND_MESSAGE:register(function(message)
+  -- prepend a tag to every message
+  return "[Avatar] " .. message
+end)
+```
+
+<Note>
+  `CHAT_SEND_MESSAGE` is a piped event. Multiple listeners each receive and return the message in registration order. Returning `nil` prevents the message from being sent.
+</Note>
+
+---
+
+### CHAT_RECEIVE_MESSAGE
+
+Fired when the client receives a chat message. The listener receives both the formatted component and the raw string.
+
+<ResponseField name="message" type="Component">
+  The formatted chat message component.
+</ResponseField>
+
+<ResponseField name="raw" type="string">
+  The raw unformatted message text.
+</ResponseField>
+
+```lua
+events.CHAT_RECEIVE_MESSAGE:register(function(message, raw)
+  if raw:find("hello") then
+    print("Someone said hello!")
+  end
+end)
+```
+
+---
+
+### SKULL_RENDER
+
+Fired when a skull block using this avatar is rendered. Receives the partial tick delta and the block position.
+
+<ResponseField name="delta" type="number">
+  Partial tick delta (0–1).
+</ResponseField>
+
+<ResponseField name="blockPos" type="Vector3">
+  The world position of the skull block being rendered.
+</ResponseField>
+
+```lua
+events.SKULL_RENDER:register(function(delta, blockPos)
+  -- custom skull rendering logic
+end)
+```
+
+---
+
+### MOUSE_SCROLL
+
+Fired when the mouse scroll wheel moves. Receives the scroll delta.
+
+<ResponseField name="delta" type="number">
+  Scroll amount. Positive values scroll up; negative values scroll down.
+</ResponseField>
+
+```lua
+events.MOUSE_SCROLL:register(function(delta)
+  print("Scroll delta: " .. delta)
+end)
+```
+
+---
+
+### MOUSE_MOVE
+
+Fired when the mouse cursor moves. Receives the X and Y deltas.
+
+<ResponseField name="dx" type="number">
+  Horizontal cursor movement in pixels.
+</ResponseField>
+
+<ResponseField name="dy" type="number">
+  Vertical cursor movement in pixels.
+</ResponseField>
+
+```lua
+events.MOUSE_MOVE:register(function(dx, dy)
+  print(dx, dy)
+end)
+```
+
+---
+
+### MOUSE_PRESS
+
+Fired when a mouse button is pressed or released. Receives the button index, action code, and modifier bitmask.
+
+<ResponseField name="button" type="integer">
+  Mouse button index (GLFW button codes: 0 = left, 1 = right, 2 = middle).
+</ResponseField>
+
+<ResponseField name="action" type="integer">
+  GLFW action: `0` = release, `1` = press.
+</ResponseField>
+
+<ResponseField name="modifiers" type="integer">
+  GLFW modifier bitmask (shift, ctrl, alt, etc.).
+</ResponseField>
+
+```lua
+events.MOUSE_PRESS:register(function(button, action, modifiers)
+  if button == 0 and action == 1 then
+    print("Left mouse button pressed")
+  end
+end)
+```
+
+---
+
+### KEY_PRESS
+
+Fired when a keyboard key is pressed, held, or released. Receives the key code, action, and modifier bitmask.
+
+<ResponseField name="key" type="integer">
+  GLFW key code for the pressed key.
+</ResponseField>
+
+<ResponseField name="action" type="integer">
+  GLFW action: `0` = release, `1` = press, `2` = repeat.
+</ResponseField>
+
+<ResponseField name="modifiers" type="integer">
+  GLFW modifier bitmask (shift, ctrl, alt, etc.).
+</ResponseField>
+
+```lua
+events.KEY_PRESS:register(function(key, action, modifiers)
+  if action == 1 then
+    print("Key pressed: " .. key)
+  end
+end)
+```
+
+---
+
+### CHAR_TYPED
+
+Fired when the player types a character in a text field. Receives the character string and its Unicode codepoint.
+
+<ResponseField name="char" type="string">
+  The typed character as a single-character string.
+</ResponseField>
+
+<ResponseField name="codepoint" type="integer">
+  Unicode codepoint of the typed character.
+</ResponseField>
+
+```lua
+events.CHAR_TYPED:register(function(char, codepoint)
+  print("Typed: " .. char)
+end)
+```
+
+---
+
+### USE_ITEM
+
+Fired when the player uses an item (right-click or hold). Receives the item stack, the use action string, and the remaining use count.
+
+<ResponseField name="item" type="ItemStack">
+  The item being used.
+</ResponseField>
+
+<ResponseField name="action" type="string">
+  The use action type (e.g. `"EAT"`, `"DRINK"`, `"BLOCK"`).
+</ResponseField>
+
+<ResponseField name="count" type="integer">
+  Number of use ticks remaining.
+</ResponseField>
+
+```lua
+events.USE_ITEM:register(function(item, action, count)
+  print(item:getName() .. " used: " .. action)
+end)
+```
+
+---
+
+### ARROW_RENDER
+
+Fired each render frame when an arrow shot by the avatar's player is being rendered. Receives the partial tick delta.
+
+<ResponseField name="delta" type="number">
+  Partial tick delta (0–1).
+</ResponseField>
+
+```lua
+events.ARROW_RENDER:register(function(delta)
+  -- customize arrow rendering
+end)
+```
+
+---
+
+### TRIDENT_RENDER
+
+Fired each render frame when a trident thrown by the avatar's player is being rendered. Receives the partial tick delta.
+
+<ResponseField name="delta" type="number">
+  Partial tick delta (0–1).
+</ResponseField>
+
+```lua
+events.TRIDENT_RENDER:register(function(delta)
+  -- customize trident rendering
+end)
+```
+
+---
+
+### ITEM_RENDER
+
+Fired when an item held by the avatar's player is rendered. Use this event to modify item rendering.
+
+```lua
+events.ITEM_RENDER:register(function()
+  -- item render logic
+end)
+```
+
+---
+
+### ON_PLAY_SOUND
+
+Fired when a sound is played by or near the avatar's player. Use this event to react to sound events.
+
+```lua
+events.ON_PLAY_SOUND:register(function()
+  -- sound play listener
+end)
+```
+
+---
+
+### RESOURCE_RELOAD
+
+Fired when Minecraft resource packs are reloaded (e.g. after pressing F3+T). No arguments are passed. Use this to reinitialize any resources your script caches.
+
+```lua
+events.RESOURCE_RELOAD:register(function()
+  print("Resources reloaded")
+end)
+```
+
+---
+
+### TOTEM
+
+Fired when the player activates a totem of undying. Use this to play custom totem animations.
+
+```lua
+events.TOTEM:register(function()
+  -- play custom totem animation
+end)
+```
+
+---
+
+### DAMAGE
+
+Fired when the avatar's player takes damage.
+
+```lua
+events.DAMAGE:register(function()
+  -- react to damage
+end)
+```
+
+---
+
+## getEvents
+
+Returns a table mapping event name strings to their `LuaEvent` objects. Useful for dynamically iterating all registered events.
+
+<ResponseField name="return" type="table&lt;string, LuaEvent&gt;">
+  Map of event name to `LuaEvent` instance.
+</ResponseField>
+
+```lua
+for name, event in pairs(events:getEvents()) do
+  print(name, #event)
+end
+```

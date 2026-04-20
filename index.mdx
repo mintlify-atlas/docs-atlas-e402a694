@@ -1,97 +1,61 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Figura: Customize Your Minecraft Character"
+description: "Figura is a Minecraft Java mod for building custom player avatars with Blockbench and Lua scripting — visible to other players without any server mod."
 ---
 
-## Setting up
+Figura gives Minecraft Java Edition players the ability to replace the default player model with a fully custom avatar created in [Blockbench](https://www.blockbench.net/). Other players running Figura can see your avatar automatically — no server-side installation required. An optional Lua scripting API lets you animate, react to events, and interact with the world in real time.
 
-Get your documentation site up and running in minutes.
-
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install Figura on Fabric, Forge, Quilt, or NeoForge and connect to the backend server.
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Your First Avatar" icon="person" href="/your-first-avatar">
+    Build and upload your first custom avatar in a few simple steps.
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Lua Scripting" icon="code" href="/lua/overview">
+    Use the Figura Lua API to animate your avatar, react to events, and sync actions.
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="API Reference" icon="book" href="/api/avatar">
+    Full reference for every Lua API available in Figura scripts.
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## How Figura works
 
-Everything you need to create world-class documentation.
+Figura avatars are stored in your local `avatars/` folder and uploaded to the Figura backend server when you equip them. Other players running Figura automatically download and render your avatar. No configuration on any Minecraft server is required.
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+<Steps>
+  <Step title="Install Figura">
+    Download the Figura mod for your preferred mod loader (Fabric, Forge, Quilt, or NeoForge) and add it to your mods folder.
+  </Step>
+  <Step title="Create an avatar in Blockbench">
+    Use the Blockbench modelling tool to design your custom player model. Export it into an avatar folder containing an `avatar.json` file.
+  </Step>
+  <Step title="Add Lua scripts (optional)">
+    Write Lua scripts inside your avatar folder to animate parts, respond to game events, play sounds, and more.
+  </Step>
+  <Step title="Equip and upload">
+    Open the Figura menu in-game, select your avatar, and upload it. Other Figura users will see it immediately.
+  </Step>
+</Steps>
 
-## Need inspiration?
+## Key features
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+<CardGroup cols={2}>
+  <Card title="Blockbench integration" icon="cube">
+    Model your avatar with full Blockbench support — meshes, groups, animations, and textures all work seamlessly.
+  </Card>
+  <Card title="Lua scripting API" icon="scroll">
+    Script complex behaviors using the built-in Lua API: events, pings, action wheels, keybinds, and more.
+  </Card>
+  <Card title="Permission system" icon="shield">
+    Robust trust levels let players control how much resource each avatar is allowed to consume on their machine.
+  </Card>
+  <Card title="Works everywhere" icon="server">
+    No server-side mod required. Your avatar is visible to all Figura users on any server.
+  </Card>
+</CardGroup>
+
+<Note>
+  Figura requires an online Mojang account. Non-premium (cracked) accounts and offline-mode servers cannot upload or download Figura avatars because Figura uses Mojang authentication to verify account ownership.
+</Note>

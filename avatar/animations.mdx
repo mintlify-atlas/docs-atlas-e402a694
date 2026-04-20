@@ -1,0 +1,197 @@
+---
+title: "Animating your Figura avatar with Blockbench"
+description: "Create animations in Blockbench, reference them by name in Lua, control playback states, loop modes, and interpolation types supported by Figura."
+---
+
+Figura reads animation data directly from your `.bbmodel` file — the same animation timeline you build inside Blockbench is what plays in-game. No baking or exporting to a separate format is required. Each animation is identified by two strings at runtime: the name of the model file and the name of the animation track.
+
+## Naming animations in Blockbench
+
+In the Blockbench **Animate** tab, every animation has a name field. That name is how you reference it from Lua. Keep names short and descriptive — they become identifiers in your scripts:
+
+```
+walk      ← animations.model.walk
+idle      ← animations.model.idle
+attack    ← animations.model.attack
+```
+
+If your avatar has multiple `.bbmodel` files, each file gets its own namespace. An animation named `idle` in `body.bbmodel` is accessed as `animations.body.idle`.
+
+## Playing animations from Lua
+
+The global `animations` table contains every animation in your avatar, grouped by model name. Each animation is an `Animation` object (`Animation.java:21`) with methods for playback control:
+
+```lua
+-- Play the "idle" animation from "model.bbmodel"
+animations.model.idle:play()
+
+-- Pause without resetting the playhead position
+animations.model.idle:pause()
+
+-- Stop and reset the playhead to the beginning
+animations.model.idle:stop()
+```
+
+### Checking playback state
+
+`Animation` exposes four mutually exclusive states (`Animation.java:641-646`):
+
+| State | Method to check | Description |
+|---|---|---|
+| `PLAYING` | `isPlaying()` | Animation is actively advancing each tick |
+| `PAUSED` | `isPaused()` | Playhead is frozen mid-animation |
+| `STOPPED` | `isStopped()` | Animation is reset and not running |
+| `HOLDING` | `isHolding()` | A `HOLD` loop animation has reached its end frame and is frozen there |
+
+```lua
+if animations.model.attack:isStopped() then
+    animations.model.idle:play()
+end
+```
+
+## Loop modes
+
+Each animation has a **loop mode** set in Blockbench that controls what happens when the playhead reaches the end (`Animation.java:648-652`):
+
+<Tabs>
+  <Tab title="ONCE">
+    The animation plays from start to finish one time, then stops automatically. Use this for one-shot actions like attacks or jumps.
+
+    ```lua
+    -- Play once and let it stop on its own
+    animations.model.jump:play()
+    ```
+  </Tab>
+  <Tab title="LOOP">
+    When the playhead reaches the end it wraps back to the beginning (or to the offset point) and continues playing indefinitely. Use this for walking, idling, and other continuous motions.
+
+    ```lua
+    -- Start looping walk cycle
+    animations.model.walk:play()
+
+    -- Stop the loop when the player is no longer moving
+    animations.model.walk:stop()
+    ```
+  </Tab>
+  <Tab title="HOLD">
+    The animation plays through once and then freezes on the final frame instead of stopping. The playback state becomes `HOLDING`. Use this for toggle states like an open mouth or deployed wings.
+
+    ```lua
+    animations.model.wingOpen:play()
+    -- Later, close them:
+    animations.model.wingOpen:stop()
+    ```
+  </Tab>
+</Tabs>
+
+## Interpolation types
+
+Figura supports four interpolation methods between keyframes, defined in `Interpolation.java`:
+
+| Type | Behavior |
+|---|---|
+| `LINEAR` | Straight linear interpolation between keyframe values. Constant rate of change — good for mechanical motion. |
+| `CATMULLROM` | Smooth spline through all keyframe values. Produces natural, fluid curves automatically. |
+| `BEZIER` | Full cubic Bézier with per-keyframe control handles for precise easing. |
+| `STEP` | No interpolation — the value jumps instantly to each keyframe's value. Useful for frame-by-frame sprite effects. |
+
+You set the interpolation method on individual keyframes in Blockbench's timeline editor.
+
+## Controlling animations from events
+
+<Tabs>
+  <Tab title="Every tick">
+    The `tick` event fires 20 times per second. Use it to check conditions and switch animations:
+
+    ```lua
+    function events.tick()
+        local vel = player:getVelocity()
+        local isMoving = vel.x ~= 0 or vel.z ~= 0
+
+        if isMoving then
+            if animations.model.walk:isStopped() then
+                animations.model.idle:stop()
+                animations.model.walk:play()
+            end
+        else
+            if animations.model.idle:isStopped() then
+                animations.model.walk:stop()
+                animations.model.idle:play()
+            end
+        end
+    end
+    ```
+  </Tab>
+  <Tab title="On entity init">
+    `entity_init` fires once when the entity owning the avatar is first loaded. Use it to start a looping idle immediately:
+
+    ```lua
+    function events.entity_init()
+        animations.model.idle:play()
+    end
+    ```
+  </Tab>
+  <Tab title="On key press">
+    Use the action wheel or key binds to trigger animations on demand:
+
+    ```lua
+    local myKey = keybinds:newKeybind("Pose", "key.keyboard.r")
+
+    myKey:onPress(function()
+        animations.model.pose:play()
+    end)
+    ```
+  </Tab>
+</Tabs>
+
+## Animation speed and blending
+
+You can adjust playback speed and blend weight at runtime:
+
+```lua
+-- Play at half speed
+animations.model.walk:setSpeed(0.5)
+
+-- Play in reverse
+animations.model.walk:setSpeed(-1)
+
+-- Set blend weight (0.0 to 1.0)
+animations.model.walk:setBlend(0.75)
+```
+
+<Note>
+  Setting speed to a negative value plays the animation in reverse. When a `HOLD` mode animation is reversed and reaches frame 0, it re-enters the `HOLDING` state there.
+</Note>
+
+## Priority and overrides
+
+When multiple animations affect the same part simultaneously, the one with the higher **priority** value wins. Set priority in Lua:
+
+```lua
+animations.model.attack:setPriority(10)
+animations.model.idle:setPriority(0)
+```
+
+The `override` flag on an animation (set in Blockbench by enabling **Override**) causes it to suppress vanilla player animations on the affected parts.
+
+---
+
+## FAQ
+
+<AccordionGroup>
+  <Accordion title="My animation plays but the part doesn't move">
+    Make sure the animated group in Blockbench matches the part name you are accessing in Lua. Group names are case-sensitive. Also confirm the animation is attached to parts inside the correct model file.
+  </Accordion>
+  <Accordion title="How do I reference animations from a second model file?">
+    Use the model file's name (without `.bbmodel`) as the namespace: `animations.secondModel.animName:play()`. Each `.bbmodel` in your avatar folder gets its own key in the `animations` table.
+  </Accordion>
+  <Accordion title="Can I use code keyframes inside Blockbench?">
+    Yes. In Blockbench's animation timeline you can add **Script** keyframes that contain Lua code. Figura evaluates these at the corresponding timestamp during playback (`Animation.java:148-170`). This is useful for triggering sounds or particle effects at precise moments in an animation.
+  </Accordion>
+  <Accordion title="Why does my LOOP animation stutter at the seam?">
+    Ensure the value at the last keyframe matches the value at the first keyframe, and that both use the same interpolation type. A mismatch in values or interpolation causes a visible pop at the loop point.
+  </Accordion>
+  <Accordion title="How do I stop all animations at once?">
+    Iterate over the animations table or stop each one individually. There is no single global stop call, so the cleanest approach is to track which animations are running in a Lua variable and stop them explicitly.
+  </Accordion>
+</AccordionGroup>

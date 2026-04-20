@@ -1,0 +1,122 @@
+---
+title: "PingAPI — broadcast functions to all viewers"
+description: "The pings global lets you define functions that execute on all clients watching the avatar when called by the host, keeping state in sync across viewers."
+---
+
+The `pings` global lets you define functions that run on every client watching the avatar whenever the host calls them. Assigning a function to a field of `pings` registers it as a ping handler; calling that field sends the arguments over the network to all viewers (and optionally the host itself). If a non-host calls a ping, the call is silently ignored.
+
+Pings are the recommended way to synchronise discrete state changes — such as toggling a part's visibility or triggering an animation — across all clients.
+
+---
+
+## How pings work
+
+Pings are defined by assigning a function to a field of the `pings` table:
+
+```lua
+function pings.myPingName(arg1, arg2)
+    -- runs on every client watching this avatar
+end
+```
+
+You call the ping like any Lua function:
+
+```lua
+pings.myPingName(value1, value2)
+```
+
+When called by the **host**, the arguments are serialised and broadcast over the Figura backend to all viewers. Each viewer's Lua runtime then calls the same function with those arguments. When called by a viewer or non-host, the call is a no-op.
+
+---
+
+## Supported argument types
+
+Ping arguments are serialised to a compact binary format. The following types are supported:
+
+| Lua type | Notes |
+|---|---|
+| `boolean` | `true` or `false` |
+| `number` (integer) | Encoded compactly in 1–4 bytes depending on magnitude |
+| `number` (float/double) | 8-byte IEEE 754 double |
+| `string` | Up to 65535 bytes |
+| `table` | Key-value pairs; keys and values must themselves be supported types |
+| `nil` | Encoded as a null marker |
+| `Vector2`, `Vector3`, `Vector4` | Figura vector types |
+| `Matrix2`, `Matrix3`, `Matrix4` | Figura matrix types |
+
+Functions, userdata, and other Lua types cannot be sent through pings.
+
+---
+
+## Rate limits
+
+Pings are rate-limited by the Figura server. Calling pings too frequently — for example every render frame — will result in dropped calls. Use pings for **discrete events** (button press, toggle) rather than continuous per-frame updates. For continuous synchronisation, update state on the `RENDER` or `TICK` event instead.
+
+---
+
+## PingFunction
+
+Internally, each entry in `pings` is a `PingFunction` object that extends `LuaFunction`. There are no `@LuaWhitelist` methods on `PingFunction` itself — the entire API surface is the assignment and call syntax on the `pings` table shown above.
+
+```lua
+-- Assigning registers the ping
+function pings.someAction(value)
+    -- ...
+end
+
+-- Re-assigning replaces the handler
+pings.someAction = function(value)
+    -- replacement handler
+end
+
+-- Assigning nil removes the ping
+pings.someAction = nil
+```
+
+---
+
+## Sync mode
+
+By default (controlled by the Figura client config `SYNC_PINGS`), when the host calls a ping the function is **not** immediately executed on the host; it waits for the server to echo it back so that host and viewer execution order is the same. When sync mode is disabled, the host executes the function locally at call time and simultaneously broadcasts it.
+
+---
+
+## Complete example
+
+```lua
+-- Define pings at the top level of your script
+function pings.setWingsVisible(visible)
+    models.MyAvatar.Wings:setVisible(visible)
+end
+
+function pings.playWaveAnim()
+    animations.MyAvatar.Wave:play()
+end
+
+-- Trigger from a keybind (host only)
+local wingsOn = true
+keybinds:newKeybind("Toggle Wings", "key.keyboard.g"):onPress(function()
+    wingsOn = not wingsOn
+    pings.setWingsVisible(wingsOn)
+end)
+
+keybinds:newKeybind("Wave", "key.keyboard.h"):onPress(function()
+    pings.playWaveAnim()
+end)
+
+-- Trigger from the action wheel (also host only)
+local page = action_wheel:newPage("main")
+action_wheel:setPage(page)
+
+page:newAction()
+    :title("Toggle Wings")
+    :item("minecraft:feather")
+    :onLeftClick(function()
+        wingsOn = not wingsOn
+        pings.setWingsVisible(wingsOn)
+    end)
+```
+
+<Note>
+  Use pings for **state synchronisation events**, not continuous per-frame data. Sending a ping every tick or every render frame will exceed the rate limit and some calls will be dropped.
+</Note>

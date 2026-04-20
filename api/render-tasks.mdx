@@ -1,0 +1,260 @@
+---
+title: "Render tasks — attach items, text, and blocks to parts"
+description: "Render tasks attach rendered objects — items, blocks, text, sprites — to any ModelPart, with full control over position, rotation, light, and scale."
+---
+
+Render tasks are objects that attach additional rendered content to a `ModelPart`. Instead of baking extra geometry into Blockbench, you create a task at runtime, configure it, and it renders as a child of its parent part each frame. Four concrete task types are available: `TextTask`, `ItemTask`, `BlockTask`, and `SpriteTask`. All four inherit a common set of base methods from `RenderTask`.
+
+Render tasks count toward the avatar's complexity budget based on the number of faces they produce.
+
+## Creating render tasks
+
+Tasks are created through methods on a `ModelPart`:
+
+```lua
+-- Attach a diamond sword to the Head group
+local itemTask = models.MyModel.Head:newItem("mySword")
+itemTask:setItem("minecraft:diamond_sword")
+itemTask:setPos(0, 8, 0)
+
+-- Attach a stone block
+local blockTask = models.MyModel.Body:newBlock("myBlock")
+blockTask:setBlock("minecraft:stone")
+
+-- Attach a text label
+local textTask = models.MyModel.Head:newText("myLabel")
+textTask:setText("Hello!")
+textTask:setPos(0, 16, 0)
+
+-- Attach a sprite (texture quad)
+local spriteTask = models.MyModel.Head:newSprite("mySprite")
+spriteTask:setTexture(textures:get("myTex"), 16, 16)
+```
+
+## Base methods (RenderTask)
+
+All task types share the following methods. Each setter returns the task itself so calls can be chained.
+
+### Visibility
+
+**`setVisible(visible)`** — show or hide this task. Alias: `visible(visible)`.
+
+**`isVisible()`** — returns the current visibility state.
+
+### Position, rotation, scale
+
+**`setPos(x, y, z)`** / **`setPos(vec3)`** — offset the task's position relative to its parent part's pivot. Units are 1/16th of a block. Alias: `pos(...)`.
+
+**`getPos()`** — returns the position offset as a `Vector3`.
+
+**`setRot(x, y, z)`** / **`setRot(vec3)`** — set the Euler rotation in degrees. Alias: `rot(...)`.
+
+**`getRot()`** — returns the rotation as a `Vector3`.
+
+**`setScale(x, y, z)`** / **`setScale(vec3)`** — set the scale. A single number scales uniformly. Alias: `scale(...)`.
+
+**`getScale()`** — returns the scale as a `Vector3`.
+
+### Lighting
+
+**`setLight(blockLight, skyLight)`** / **`setLight(vec2)`** — override the light level for this task (0–15 per channel). Pass `nil` to inherit from the parent part. Alias: `light(...)`.
+
+**`getLight()`** — returns the light override as a `Vector2`, or `nil` if not set.
+
+### Overlay
+
+**`setOverlay(whiteOverlay, hurtOverlay)`** / **`setOverlay(vec2)`** — override the overlay values (e.g. hurt flash). Pass `nil` to inherit. Alias: `overlay(...)`.
+
+**`getOverlay()`** — returns the overlay as a `Vector2`, or `nil`.
+
+### Matrix
+
+**`setMatrix(matrix)`** — set an explicit 4×4 transformation matrix, bypassing pos/rot/scale. Alias: `matrix(matrix)`.
+
+**`getPositionMatrix()`** — recalculates and returns the 4×4 position matrix.
+
+**`getPositionMatrixRaw()`** — returns the cached 4×4 position matrix without recalculating.
+
+**`getNormalMatrix()`** — recalculates and returns the 3×3 normal matrix.
+
+**`getNormalMatrixRaw()`** — returns the cached 3×3 normal matrix.
+
+### Name and lifecycle
+
+**`getName()`** — returns the name this task was registered with.
+
+**`remove()`** — detach this task from its parent part.
+
+**`copy()`** — create a copy of this task. The copy is not automatically attached to any part.
+
+## TextTask
+
+`TextTask` renders a string of text (optionally JSON formatted) as a flat label. Create one with `part:newText(name)`.
+
+### Text content
+
+**`setText(text)`** — set the text to display. Accepts a plain string or JSON-formatted Minecraft text. Use `nil` to clear. Alias: `text(text)`.
+
+**`getText()`** — returns the raw text string that was set.
+
+### Formatting
+
+**`setAlignment(alignment)`** — set text alignment. Valid values: `"LEFT"`, `"CENTER"`, `"RIGHT"`. Alias: `alignment(alignment)`.
+
+**`getAlignment()`** — returns the current alignment name.
+
+**`setWidth(width)`** — set the maximum width in pixels before text wraps. `0` means no limit. Alias: `width(width)`.
+
+**`getWidth()`** — returns the current wrap width.
+
+**`setWrap(wrap)`** — enable or disable text wrapping at the set width. Alias: `wrap(wrap)`.
+
+**`hasWrap()`** — returns whether wrapping is enabled.
+
+**`setSpacing(spacing)`** — set extra pixels of spacing between lines. Default is `1`. Alias: `lineSpacing(spacing)` / `spacing(spacing)`.
+
+**`getSpacing()`** — returns the current line spacing.
+
+### Visual effects
+
+**`setShadow(shadow)`** — enable or disable the text drop-shadow. Alias: `shadow(shadow)`.
+
+**`hasShadow()`** — returns whether shadow is enabled.
+
+**`setOutline(outline)`** — enable or disable the 8-way thick outline. Alias: `outline(outline)`.
+
+**`hasOutline()`** — returns whether outline is enabled.
+
+**`setOutlineColor(r, g, b)`** / **`setOutlineColor(vec3)`** — set the outline color (0–1 range). Alias: `outlineColor(...)`.
+
+**`getOutlineColor()`** — returns the outline color as a `Vector3`.
+
+**`setSeeThrough(seeThrough)`** — when `true`, text renders through geometry. Alias: `seeThrough(seeThrough)`.
+
+**`isSeeThrough()`** — returns whether see-through is enabled.
+
+**`setBackground(background)`** — enable or disable the default translucent background panel behind the text. Alias: `background(background)`.
+
+**`hasBackground()`** — returns whether the background is enabled.
+
+**`setBackgroundColor(r, g, b, a)`** / **`setBackgroundColor(rgba)`** — set a custom background color (0–1 range). Alias: `backgroundColor(...)`.
+
+**`getBackgroundColor()`** — returns the background color as a `Vector4`, or `nil`.
+
+**`setOpacity(opacity)`** — set the overall text opacity (0–1). Alias: `opacity(opacity)`.
+
+**`getOpacity()`** — returns the current opacity.
+
+```lua
+local label = models.MyModel.Head:newText("nameplate")
+label:setText("§aHello!")
+label:setAlignment("CENTER")
+label:setShadow(true)
+label:setPos(0, 20, 0)
+label:setScale(0.5, 0.5, 0.5)
+```
+
+## ItemTask
+
+`ItemTask` renders a Minecraft item using the standard item renderer. Create one with `part:newItem(name)`.
+
+**`setItem(item)`** — set the item to render. Accepts an item ID string (e.g. `"minecraft:diamond_sword"`) or an `ItemStack` API object. Alias: `item(item)`.
+
+**`setDisplayMode(displayMode)`** — set how the item model is transformed. Accepts a Minecraft `ItemDisplayContext` name string: `"NONE"`, `"THIRD_PERSON_LEFT_HAND"`, `"THIRD_PERSON_RIGHT_HAND"`, `"FIRST_PERSON_LEFT_HAND"`, `"FIRST_PERSON_RIGHT_HAND"`, `"HEAD"`, `"GUI"`, `"GROUND"`, `"FIXED"`. Alias: `displayMode(displayMode)`.
+
+**`getDisplayMode()`** — returns the current display mode name.
+
+```lua
+local sword = models.MyModel.Head:newItem("sword")
+sword:setItem("minecraft:diamond_sword")
+sword:setDisplayMode("THIRD_PERSON_RIGHT_HAND")
+sword:setPos(4, 8, 0)
+sword:setScale(16, 16, 16)
+```
+
+## BlockTask
+
+`BlockTask` renders a full block model. Create one with `part:newBlock(name)`.
+
+**`setBlock(block)`** — set the block state to render. Accepts a block ID string (e.g. `"minecraft:stone"`) or a `BlockState` API object. Alias: `block(block)`.
+
+```lua
+local floatingBlock = models.MyModel.Head:newBlock("floater")
+floatingBlock:setBlock("minecraft:grass_block")
+floatingBlock:setPos(0, 24, 0)
+floatingBlock:setScale(16, 16, 16)
+```
+
+> **Note:** Block tasks scale 16× relative to the part pivot by default in their render method, so you generally want to account for that in your `setScale` call.
+
+## SpriteTask
+
+`SpriteTask` renders a flat textured quad. Create one with `part:newSprite(name)`.
+
+### Texture
+
+**`setTexture(textureLocation, width, height)`** / **`setTexture(texture)`** / **`setTexture(texture, width, height)`** / **`setTexture(textureLocation, dimensions)`** / **`setTexture(texture, dimensions)`** — set the texture to display. A string resource location requires explicit dimensions; a `Texture` object infers dimensions automatically. Alias: `texture(...)`.
+
+**`getTexture()`** — returns the resource location string of the current texture, or `nil`.
+
+### Size and UV
+
+**`setDimensions(width, height)`** / **`setDimensions(vec2)`** — set the full texture dimensions in pixels (used to compute UV coordinates). Alias: `dimensions(...)`.
+
+**`getDimensions()`** — returns the texture dimensions as a `Vector2`.
+
+**`setSize(width, height)`** / **`setSize(vec2)`** — set the rendered quad size in pixels. Alias: `size(...)`.
+
+**`getSize()`** — returns the quad size as a `Vector2`.
+
+**`setRegion(width, height)`** / **`setRegion(vec2)`** — set the size of the UV region sampled from the texture (sub-texture sampling). Alias: `region(...)`.
+
+**`getRegion()`** — returns the region size as a `Vector2`.
+
+**`setUV(u, v)`** / **`setUV(vec2)`** — set the UV origin (top-left corner) in normalized 0–1 coordinates. Alias: `uv(...)`.
+
+**`getUV()`** — returns the UV origin as a `Vector2`.
+
+**`setUVPixels(u, v)`** / **`setUVPixels(vec2)`** — set the UV origin in pixel coordinates. Requires dimensions to be set first. Alias: `uvPixels(...)`.
+
+**`getUVPixels()`** — returns the UV origin in pixels.
+
+**`setUVMatrix(matrix)`** — apply a 3×3 matrix to the four UV corners of the quad for custom UV transformations. Alias: `uvMatrix(matrix)`.
+
+### Color
+
+**`setColor(r, g, b)`** / **`setColor(rgba)`** / **`setColor(r, g, b, a)`** — tint the sprite (0–1 range, default is white/opaque). Alias: `color(...)`.
+
+**`getColor()`** — returns the tint color as a `Vector4`.
+
+### Render type
+
+**`setRenderType(renderType)`** — set the render type for the sprite quad. Accepts any `RenderTypes` enum name (see the [TextureAPI page](./textures) for the full list). Default is `TRANSLUCENT`. Alias: `renderType(renderType)`.
+
+**`getRenderType()`** — returns the current render type name.
+
+### Vertices
+
+**`getVertices()`** — returns the list of the four `Vertex` objects making up the quad, for advanced manipulation.
+
+```lua
+local sprite = models.MyModel.Head:newSprite("icon")
+sprite:setTexture(textures:get("icons"), 64, 64)
+sprite:setRegion(16, 16)     -- sample a 16×16 region
+sprite:setUVPixels(0, 0)     -- starting at pixel (0, 0)
+sprite:setSize(16, 16)       -- display at 16×16 pixels
+sprite:setPos(0, 20, 0)
+sprite:setColor(1, 1, 1, 1)
+sprite:setRenderType("CUTOUT")
+```
+
+## Complexity
+
+Each task type contributes differently to the avatar complexity counter:
+
+- **`TextTask`**: complexity = `text:len() + 1`
+- **`ItemTask`**: complexity = number of quads in the item model
+- **`BlockTask`**: complexity = number of quads in the block model (all faces + no-cull quads)
+- **`SpriteTask`**: 1 face = 1 complexity
+
+When the avatar exceeds its complexity limit mid-frame, rendering stops early and remaining parts (including tasks) are skipped.
